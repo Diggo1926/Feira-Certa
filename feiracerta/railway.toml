@@ -1,11 +1,10 @@
 [build]
-builder = "nixpacks"
-buildCommand = "cd backend && npm install"
-nixpacksPlan = "nodejs-20"
+builder = "NIXPACKS"
+
+[build.env]
+NIXPACKS_NODE_VERSION = "20"
 
 [deploy]
-startCommand = "node backend/server.js"
-healthcheckPath = "/api/config/dashboard"
-healthcheckTimeout = 30
-restartPolicyType = "on_failure"
+startCommand = "node server.js"
+restartPolicyType = "ON_FAILURE"
 restartPolicyMaxRetries = 3
