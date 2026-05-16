@@ -1,0 +1,422 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+  <meta name="theme-color" content="#C9956E">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="default">
+  <title>FeiraCerta</title>
+  <link rel="manifest" href="/manifest.json">
+  <link rel="stylesheet" href="/css/style.css">
+  <!-- html5-qrcode via CDN -->
+  <script src="https://unpkg.com/html5-qrcode@2.3.8/html5-qrcode.min.js"></script>
+</head>
+<body>
+
+<!-- ===== PÁGINAS ===== -->
+
+<!-- INÍCIO / DASHBOARD -->
+<section class="pagina ativa" id="pg-inicio">
+  <div class="tela-header">
+    <div>
+      <div class="tela-titulo">FeiraCerta</div>
+      <div style="font-size:13px;color:var(--texto-sec)">Seu estoque doméstico</div>
+    </div>
+    <button class="btn btn-secundario btn-sm" onclick="irPara('pg-config')" style="margin-left:auto">
+      <svg viewBox="0 0 24 24" fill="none" stroke-width="2" width="18" height="18"><path d="M12 15.5A3.5 3.5 0 0 1 8.5 12 3.5 3.5 0 0 1 12 8.5a3.5 3.5 0 0 1 3.5 3.5 3.5 3.5 0 0 1-3.5 3.5m7.43-1.57c.04-.32.07-.64.07-.93s-.03-.62-.07-.93l2-1.57c.18-.14.23-.41.12-.61l-1.9-3.28c-.12-.22-.37-.3-.59-.22l-2.39.95c-.5-.38-1.03-.7-1.62-.94l-.36-2.54c-.04-.24-.24-.41-.48-.41h-3.8c-.24 0-.43.17-.47.41l-.36 2.54c-.59.24-1.13.57-1.62.94l-2.39-.95c-.22-.08-.47 0-.59.22L2.74 8.87c-.12.21-.08.47.12.61l2 1.57c-.04.31-.07.63-.07.95s.03.64.07.95l-2 1.57c-.18.14-.23.4-.12.6l1.9 3.28c.12.22.37.29.59.22l2.39-.95c.49.38 1.03.7 1.62.94l.36 2.54c.04.24.23.41.47.41h3.8c.24 0 .44-.17.47-.41l.36-2.54c.59-.24 1.13-.56 1.62-.94l2.39.95c.22.08.47 0 .59-.22l1.9-3.28c.12-.21.07-.47-.12-.6l-2-1.58z"/></svg>
+    </button>
+  </div>
+
+  <div id="alertas-dashboard"></div>
+
+  <div id="cards-dashboard"></div>
+
+  <div class="card" style="cursor:pointer;background:linear-gradient(135deg,var(--musgo),#587a4e);color:white;border:none" onclick="irPara('pg-feira')">
+    <div style="display:flex;align-items:center;gap:12px">
+      <svg viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2" width="32" height="32"><path d="M6 2L3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4z"/><line x1="3" y1="6" x2="21" y2="6"/><path d="M16 10a4 4 0 0 1-8 0"/></svg>
+      <div>
+        <div style="font-family:'Playfair Display',serif;font-size:17px;font-weight:700">Registrar Feira</div>
+        <div style="font-size:13px;color:rgba(255,255,255,0.85)">Leia a nota do Nunes Peixoto</div>
+      </div>
+      <svg viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2" width="20" height="20" style="margin-left:auto"><polyline points="9 18 15 12 9 6"/></svg>
+    </div>
+  </div>
+</section>
+
+<!-- ESTOQUE -->
+<section class="pagina" id="pg-estoque">
+  <div class="tela-header">
+    <div class="tela-titulo">Estoque</div>
+  </div>
+  <div class="campo-busca">
+    <svg viewBox="0 0 24 24" fill="none" stroke-width="2"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+    <input type="text" id="busca-estoque" placeholder="Buscar produto...">
+  </div>
+  <div id="lista-estoque"></div>
+</section>
+
+<!-- CADASTRAR -->
+<section class="pagina" id="pg-cadastro">
+  <div class="tela-header">
+    <div class="tela-titulo" id="cadastro-titulo">Cadastrar Produto</div>
+  </div>
+  <input type="hidden" id="cadastro-id">
+
+  <div class="bloco-separador">
+    <div class="bloco-titulo">
+      <svg viewBox="0 0 24 24" fill="none" stroke="var(--musgo)" stroke-width="2" width="16" height="16"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg>
+      Informações Principais
+    </div>
+
+    <div class="campo">
+      <label for="c-nome">Nome do Produto *</label>
+      <input type="text" id="c-nome" placeholder="Ex: Arroz Integral" maxlength="200">
+    </div>
+
+    <div class="campo">
+      <label for="c-categoria">Categoria *</label>
+      <select id="c-categoria">
+        <option value="">Selecionar...</option>
+        <option>Grãos e Cereais</option>
+        <option>Laticínios</option>
+        <option>Carnes e Peixes</option>
+        <option>Hortifrúti</option>
+        <option>Bebidas</option>
+        <option>Limpeza</option>
+        <option>Higiene</option>
+        <option>Temperos e Condimentos</option>
+        <option>Massas e Pães</option>
+        <option>Enlatados e Conservas</option>
+        <option>Frios e Embutidos</option>
+        <option>Congelados</option>
+        <option value="__nova__">+ Nova categoria...</option>
+      </select>
+      <input type="text" id="c-categoria-nova" placeholder="Nome da nova categoria" style="margin-top:8px;display:none" maxlength="100">
+    </div>
+
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
+      <div class="campo">
+        <label for="c-unidade">Unidade</label>
+        <select id="c-unidade">
+          <option>Unidade</option>
+          <option>Kg</option>
+          <option>Litro</option>
+          <option>Pacote</option>
+          <option>Caixa</option>
+          <option>Lata</option>
+          <option>Garrafa</option>
+        </select>
+      </div>
+      <div class="campo">
+        <label for="c-preco">Preço (R$)</label>
+        <input type="number" id="c-preco" placeholder="0,00" step="0.01" min="0">
+      </div>
+    </div>
+
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
+      <div class="campo">
+        <label for="c-qtd-atual">Qtd. Atual *</label>
+        <input type="number" id="c-qtd-atual" placeholder="0" step="0.1" min="0">
+        <div id="previsao-qtd" style="font-size:11px;color:var(--texto-sec);margin-top:4px"></div>
+      </div>
+      <div class="campo">
+        <label for="c-qtd-min">Qtd. Mínima *</label>
+        <input type="number" id="c-qtd-min" placeholder="1" step="0.1" min="0">
+      </div>
+    </div>
+  </div>
+
+  <div class="bloco-separador">
+    <div class="bloco-titulo">
+      <svg viewBox="0 0 24 24" fill="none" stroke="var(--musgo)" stroke-width="2" width="16" height="16"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
+      Informações Opcionais
+    </div>
+
+    <div class="campo">
+      <label for="c-marca">Marca</label>
+      <input type="text" id="c-marca" placeholder="Ex: Camil" maxlength="100">
+    </div>
+
+    <div class="campo">
+      <label>Código de Barras</label>
+      <div style="display:flex;gap:8px">
+        <input type="text" id="c-codigo" placeholder="EAN13 ou QR Code" maxlength="50" style="flex:1">
+        <button class="btn btn-secundario btn-sm" onclick="abrirScannerCadastro()" type="button">
+          <svg viewBox="0 0 24 24" fill="none" stroke-width="2" width="18" height="18"><rect x="2" y="2" width="5" height="5"/><rect x="17" y="2" width="5" height="5"/><rect x="2" y="17" width="5" height="5"/><path d="M2 9h2m4 0h2m4 0h2m2 0h2M9 2v2m0 4v2m0 4v2m0 4v2"/></svg>
+          Ler
+        </button>
+      </div>
+      <div id="scanner-cadastro" style="margin-top:10px;display:none"></div>
+    </div>
+
+    <div id="historico-precos-cadastro" style="display:none">
+      <div class="bloco-titulo" style="margin-top:8px">Histórico de Preços</div>
+      <div class="grafico-wrap">
+        <canvas id="canvas-precos-cadastro" height="100"></canvas>
+      </div>
+    </div>
+  </div>
+
+  <div class="form-rodape">
+    <button class="btn btn-primario" onclick="salvarProduto()">Salvar Produto</button>
+  </div>
+</section>
+
+<!-- LISTA DE COMPRAS -->
+<section class="pagina" id="pg-lista">
+  <div class="tela-header">
+    <div class="tela-titulo">Lista de Compras</div>
+  </div>
+  <div id="total-lista"></div>
+  <div class="acoes-lista">
+    <button class="btn btn-secundario btn-sm" onclick="adicionarItemManual()">
+      <svg viewBox="0 0 24 24" fill="none" stroke-width="2.5" width="16" height="16"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+      Adicionar
+    </button>
+    <button class="btn btn-secundario btn-sm" onclick="abrirModoFeira()">
+      <svg viewBox="0 0 24 24" fill="none" stroke-width="2" width="16" height="16"><path d="M1 3h2l.4 2M7 13h10l4-8H5.4M7 13L5.4 5M7 13l-2.293 2.293c-.63.63-.184 1.707.707 1.707H17m0 0a2 2 0 1 0 0 4 2 2 0 0 0 0-4zm-10 2a2 2 0 1 0 0 4 2 2 0 0 0 0-4z"/></svg>
+      Modo Feira
+    </button>
+  </div>
+  <div class="acoes-lista">
+    <button class="btn btn-secundario btn-sm" onclick="compartilharWhatsapp()">
+      <svg viewBox="0 0 24 24" fill="none" stroke-width="2" width="16" height="16"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
+      WhatsApp
+    </button>
+    <button class="btn btn-secundario btn-sm" onclick="exportarPDF()">
+      <svg viewBox="0 0 24 24" fill="none" stroke-width="2" width="16" height="16"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+      PDF
+    </button>
+  </div>
+  <button class="btn btn-musgo" onclick="registrarFeiraDaLista()" style="width:100%;margin-bottom:14px">
+    <svg viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2" width="18" height="18"><polyline points="20 6 9 17 4 12"/></svg>
+    Registrar Feira como Feita
+  </button>
+  <div id="conteudo-lista"></div>
+</section>
+
+<!-- REGISTRAR FEIRA -->
+<section class="pagina" id="pg-feira">
+  <div class="tela-header">
+    <div class="tela-titulo">Registrar Feira</div>
+  </div>
+
+  <div id="feira-etapa-1">
+    <p style="color:var(--texto-sec);font-size:14px;margin-bottom:16px">
+      Leia o QR Code da nota fiscal eletrônica do Nunes Peixoto para importar os produtos automaticamente.
+    </p>
+
+    <div class="scanner-area">
+      <svg viewBox="0 0 24 24" fill="none" stroke="var(--musgo)" stroke-width="2" width="48" height="48"><rect x="2" y="2" width="5" height="5" rx="1"/><rect x="17" y="2" width="5" height="5" rx="1"/><rect x="2" y="17" width="5" height="5" rx="1"/><path d="M2 9h2m4 0h2m4 0h2m2 0h2M9 2v2m0 4v2m0 4v2m0 4v2M17 9v2m0 4v2m0 4v2"/></svg>
+      <p>Aponte a câmera para o QR Code da nota fiscal</p>
+      <button class="btn btn-primario" style="margin-top:14px" onclick="iniciarScannerNota()">
+        Abrir Câmera
+      </button>
+    </div>
+
+    <div id="scanner-nota" style="margin-bottom:14px;display:none"></div>
+
+    <div class="divider"></div>
+    <p style="text-align:center;color:var(--texto-sec);font-size:13px;margin-bottom:12px">Ou cole a URL da nota</p>
+    <div class="campo">
+      <input type="url" id="url-nota" placeholder="https://nfce.sefaz.se.gov.br/...">
+    </div>
+    <button class="btn btn-secundario" style="width:100%" onclick="processarURLNota()">
+      <svg viewBox="0 0 24 24" fill="none" stroke-width="2" width="18" height="18"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></svg>
+      Processar URL
+    </button>
+
+    <div class="divider"></div>
+    <button class="btn btn-secundario" style="width:100%" onclick="mostrarRegistroManual()">
+      Registrar Feira Manualmente
+    </button>
+  </div>
+
+  <div id="feira-etapa-2" style="display:none"></div>
+  <div id="feira-manual" style="display:none">
+    <div class="campo">
+      <label for="feira-manual-data">Data da Feira</label>
+      <input type="date" id="feira-manual-data">
+    </div>
+    <div class="campo">
+      <label for="feira-manual-valor">Valor Total (R$)</label>
+      <input type="number" id="feira-manual-valor" placeholder="0,00" step="0.01" min="0">
+    </div>
+    <button class="btn btn-primario" onclick="confirmarFeiraManual()">Registrar</button>
+  </div>
+</section>
+
+<!-- HISTÓRICO -->
+<section class="pagina" id="pg-historico">
+  <div class="tela-header">
+    <div class="tela-titulo">Histórico de Feiras</div>
+  </div>
+  <div class="grafico-wrap" style="margin-bottom:16px">
+    <canvas id="canvas-historico" height="120"></canvas>
+  </div>
+  <div id="lista-historico"></div>
+</section>
+
+<!-- CONFIGURAÇÕES -->
+<section class="pagina" id="pg-config">
+  <div class="tela-header">
+    <button class="btn btn-secundario btn-sm btn-icon" onclick="irPara('pg-inicio')">
+      <svg viewBox="0 0 24 24" fill="none" stroke-width="2.5" width="18" height="18"><polyline points="15 18 9 12 15 6"/></svg>
+    </button>
+    <div class="tela-titulo">Configurações</div>
+  </div>
+
+  <div class="bloco-separador">
+    <div class="bloco-titulo">Orçamento</div>
+    <div class="campo">
+      <label for="meta-orcamento">Meta por Feira (R$) — opcional</label>
+      <input type="number" id="meta-orcamento" placeholder="Ex: 300,00" step="0.01" min="0">
+    </div>
+    <button class="btn btn-primario" onclick="salvarConfiguracao()">Salvar</button>
+  </div>
+
+  <div class="bloco-separador">
+    <div class="bloco-titulo">Notificações</div>
+    <p style="font-size:13px;color:var(--texto-sec);margin-bottom:12px">Receba alertas quando o estoque estiver baixo ou for hora de fazer a feira.</p>
+    <button class="btn btn-secundario" style="width:100%;margin-bottom:8px" onclick="ativarNotificacoes()">
+      Ativar Notificações
+    </button>
+    <button class="btn btn-secundario" style="width:100%" onclick="testarNotificacao()">
+      Testar Notificação
+    </button>
+  </div>
+
+  <div class="bloco-separador">
+    <div class="bloco-titulo">Backup</div>
+    <button class="btn btn-musgo" style="width:100%;margin-bottom:10px" onclick="exportarBackup()">
+      <svg viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2" width="18" height="18"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+      Exportar Dados (JSON)
+    </button>
+    <label class="btn btn-secundario" style="width:100%;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:8px">
+      <svg viewBox="0 0 24 24" fill="none" stroke-width="2" width="18" height="18"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+      Importar Backup
+      <input type="file" id="input-importar" accept=".json" style="display:none" onchange="importarBackup(this)">
+    </label>
+  </div>
+</section>
+
+<!-- ===== NAVEGAÇÃO ===== -->
+<nav class="nav-bottom">
+  <button class="nav-item ativo" onclick="irPara('pg-inicio')" data-pg="pg-inicio">
+    <svg viewBox="0 0 24 24" fill="none" stroke-width="2"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>
+    Início
+  </button>
+  <button class="nav-item" onclick="irPara('pg-estoque')" data-pg="pg-estoque">
+    <svg viewBox="0 0 24 24" fill="none" stroke-width="2"><line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/><line x1="3" y1="6" x2="3.01" y2="6"/><line x1="3" y1="12" x2="3.01" y2="12"/><line x1="3" y1="18" x2="3.01" y2="18"/></svg>
+    Estoque
+  </button>
+  <button class="nav-item" onclick="irPara('pg-cadastro');novoCadastro()" data-pg="pg-cadastro">
+    <svg viewBox="0 0 24 24" fill="none" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="16"/><line x1="8" y1="12" x2="16" y2="12"/></svg>
+    Cadastrar
+  </button>
+  <button class="nav-item" onclick="irPara('pg-lista')" data-pg="pg-lista">
+    <svg viewBox="0 0 24 24" fill="none" stroke-width="2"><polyline points="9 11 12 14 22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg>
+    Lista
+  </button>
+  <button class="nav-item" onclick="irPara('pg-feira')" data-pg="pg-feira">
+    <svg viewBox="0 0 24 24" fill="none" stroke-width="2"><path d="M6 2L3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4z"/><line x1="3" y1="6" x2="21" y2="6"/><path d="M16 10a4 4 0 0 1-8 0"/></svg>
+    Feira
+  </button>
+  <button class="nav-item" onclick="irPara('pg-historico')" data-pg="pg-historico">
+    <svg viewBox="0 0 24 24" fill="none" stroke-width="2"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>
+    Histórico
+  </button>
+</nav>
+
+<!-- ===== FAB (REGISTRAR CONSUMO) ===== -->
+<button class="fab" id="fab-consumo" onclick="abrirModalConsumo()" title="Registrar consumo">
+  <svg viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2.5"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
+</button>
+
+<!-- ===== MODAL CONSUMO ===== -->
+<div class="modal-overlay" id="modal-consumo">
+  <div class="modal">
+    <div class="modal-handle"></div>
+    <div class="modal-titulo">Registrar Consumo</div>
+
+    <div class="campo-busca" style="margin-bottom:10px">
+      <svg viewBox="0 0 24 24" fill="none" stroke-width="2"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+      <input type="text" id="busca-consumo" placeholder="Buscar produto..." oninput="buscarProdutoConsumo(this.value)">
+    </div>
+
+    <div style="margin-bottom:10px">
+      <button class="btn btn-secundario btn-sm" onclick="abrirScannerConsumo()" style="width:100%">
+        <svg viewBox="0 0 24 24" fill="none" stroke-width="2" width="16" height="16"><rect x="2" y="2" width="5" height="5"/><rect x="17" y="2" width="5" height="5"/><rect x="2" y="17" width="5" height="5"/><path d="M2 9h2m4 0h2m4 0h2m2 0h2M9 2v2m0 4v2m0 4v2m0 4v2"/></svg>
+        Ler Código de Barras
+      </button>
+      <div id="scanner-consumo" style="margin-top:8px;display:none"></div>
+    </div>
+
+    <div id="resultados-busca-consumo"></div>
+    <div id="form-consumo" style="display:none">
+      <div class="card" style="margin-bottom:14px">
+        <div style="font-weight:700;font-size:16px" id="consumo-produto-nome"></div>
+        <div style="font-size:13px;color:var(--texto-sec);margin-top:4px">
+          Quantidade atual: <strong id="consumo-qtd-atual"></strong>
+        </div>
+      </div>
+      <div class="campo">
+        <label for="consumo-nova-qtd">Quanto ainda sobrou?</label>
+        <input type="number" id="consumo-nova-qtd" placeholder="0" step="0.1" min="0">
+      </div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
+        <button class="btn btn-secundario" onclick="fecharModalConsumo()">Cancelar</button>
+        <button class="btn btn-primario" onclick="confirmarConsumo()">Confirmar</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ===== MODAL ITEM MANUAL ===== -->
+<div class="modal-overlay" id="modal-item-manual">
+  <div class="modal">
+    <div class="modal-handle"></div>
+    <div class="modal-titulo">Adicionar Item</div>
+    <div class="campo">
+      <label for="item-manual-nome">Nome do item</label>
+      <input type="text" id="item-manual-nome" placeholder="Ex: Pão de Forma" maxlength="200">
+    </div>
+    <div class="campo">
+      <label for="item-manual-qtd">Quantidade</label>
+      <input type="text" id="item-manual-qtd" placeholder="Ex: 2 pacotes" maxlength="50">
+    </div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
+      <button class="btn btn-secundario" onclick="fecharModalItemManual()">Cancelar</button>
+      <button class="btn btn-primario" onclick="confirmarItemManual()">Adicionar</button>
+    </div>
+  </div>
+</div>
+
+<!-- ===== MODO FEIRA ===== -->
+<div class="modo-feira" id="modo-feira">
+  <div class="modo-feira-header">
+    <div class="modo-feira-titulo">
+      <svg viewBox="0 0 24 24" fill="none" stroke="var(--musgo)" stroke-width="2" width="28" height="28"><path d="M1 3h2l.4 2M7 13h10l4-8H5.4M7 13L5.4 5M7 13l-2.293 2.293c-.63.63-.184 1.707.707 1.707H17m0 0a2 2 0 1 0 0 4 2 2 0 0 0 0-4zm-10 2a2 2 0 1 0 0 4 2 2 0 0 0 0-4z"/></svg>
+      Modo Feira
+    </div>
+    <button class="btn btn-secundario btn-sm" onclick="fecharModoFeira()">Sair</button>
+  </div>
+  <div id="itens-modo-feira"></div>
+</div>
+
+<!-- ===== TOAST ===== -->
+<div class="toast" id="toast"></div>
+
+<!-- ===== SCRIPTS ===== -->
+<script src="/env.js"></script>
+<script src="/js/app.js"></script>
+<script src="/js/estoque.js"></script>
+<script src="/js/cadastro.js"></script>
+<script src="/js/lista.js"></script>
+<script src="/js/feira.js"></script>
+<script src="/js/historico.js"></script>
+<script src="/js/consumo.js"></script>
+<script src="/js/configuracoes.js"></script>
+</body>
+</html>

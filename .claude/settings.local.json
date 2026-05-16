@@ -1,0 +1,28 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(mkdir -p \"C:\\\\Users\\\\Diggo.Dev\\\\Documents\\\\projetos pessoais\\\\Controle de estoque\\\\feiracerta\\\\backend\\\\routes\")",
+      "Bash(mkdir -p \"C:\\\\Users\\\\Diggo.Dev\\\\Documents\\\\projetos pessoais\\\\Controle de estoque\\\\feiracerta\\\\backend\\\\middleware\")",
+      "Bash(mkdir -p \"C:\\\\Users\\\\Diggo.Dev\\\\Documents\\\\projetos pessoais\\\\Controle de estoque\\\\feiracerta\\\\backend\\\\db\")",
+      "Bash(mkdir -p \"C:\\\\Users\\\\Diggo.Dev\\\\Documents\\\\projetos pessoais\\\\Controle de estoque\\\\feiracerta\\\\frontend\\\\css\")",
+      "Bash(mkdir -p \"C:\\\\Users\\\\Diggo.Dev\\\\Documents\\\\projetos pessoais\\\\Controle de estoque\\\\feiracerta\\\\frontend\\\\js\")",
+      "Bash(npm install *)",
+      "Bash(node -e \"const db = require\\('better-sqlite3'\\)\\(':memory:'\\); console.log\\('SQLite OK:', db.prepare\\('SELECT sqlite_version\\(\\)'\\).get\\(\\)\\);\")",
+      "Bash(node server.js)",
+      "Bash(node -e ' *)",
+      "Bash(curl -s http://localhost:3000/api/config/dashboard)",
+      "Bash(python -m json.tool)",
+      "Bash(curl -s http://localhost:3000/api/produtos)",
+      "Bash(curl -s -X POST http://localhost:3000/api/produtos -H \"Content-Type: application/json\" -d \"{\\\\\"nome\\\\\":\\\\\"Arroz Integral\\\\\",\\\\\"categoria\\\\\":\\\\\"Grãos e Cereais\\\\\",\\\\\"unidade\\\\\":\\\\\"Kg\\\\\",\\\\\"quantidade_atual\\\\\":2,\\\\\"quantidade_minima\\\\\":5,\\\\\"preco\\\\\":8.90,\\\\\"marca\\\\\":\\\\\"Camil\\\\\"}\")",
+      "Bash(curl -s http://localhost:3000/)",
+      "Bash(Get-Process -Name node -ErrorAction SilentlyContinue)",
+      "Bash(Stop-Process -Force -ErrorAction SilentlyContinue)",
+      "Bash(pkill -f \"node server.js\")",
+      "Bash(curl *)",
+      "Bash(git *)",
+      "Bash(Get-ChildItem -Path \"C:\\\\Users\\\\Diggo.Dev\\\\Documents\\\\projetos pessoais\\\\Controle de estoque\\\\feiracerta\" -Recurse -File)",
+      "Bash(Select-Object -ExpandProperty FullName)",
+      "Bash(Sort-Object)"
+    ]
+  }
+}

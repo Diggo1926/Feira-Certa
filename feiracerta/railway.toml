@@ -1,0 +1,14 @@
+[build]
+builder = "nixpacks"
+buildCommand = "cd backend && npm install"
+
+[deploy]
+startCommand = "node backend/server.js"
+healthcheckPath = "/api/config/dashboard"
+healthcheckTimeout = 30
+restartPolicyType = "on_failure"
+restartPolicyMaxRetries = 3
+
+# IMPORTANTE: Configure um Volume no dashboard do Railway com mount path /data
+# para que o banco SQLite seja persistido entre deploys.
+# Defina DB_PATH=/data/feiracerta.db nas variáveis de ambiente.
