@@ -4,32 +4,33 @@ const { body, param } = require('express-validator');
 const { validar } = require('../middleware/validacao');
 const db = require('../db/database');
 
-router.get('/', (req, res) => {
+router.get('/', async (req, res) => {
   try {
-    const feiras = db.prepare(`
+    const { rows } = await db.query(`
       SELECT f.*,
         (SELECT valor_total FROM feiras WHERE id < f.id ORDER BY id DESC LIMIT 1) as valor_anterior
       FROM feiras f ORDER BY f.data DESC
-    `).all().map(f => ({
+    `);
+    res.json(rows.map(f => ({
       ...f,
       variacao: f.valor_anterior
         ? Math.round(((f.valor_total - f.valor_anterior) / f.valor_anterior) * 100 * 10) / 10
         : null
-    }));
-    res.json(feiras);
+    })));
   } catch (e) {
     res.status(500).json({ erro: 'Erro ao buscar feiras' });
   }
 });
 
-router.get('/:id', [param('id').isInt({ min: 1 }), validar], (req, res) => {
+router.get('/:id', [param('id').isInt({ min: 1 }), validar], async (req, res) => {
   try {
-    const feira = db.prepare('SELECT * FROM feiras WHERE id = ?').get(req.params.id);
+    const { rows: [feira] } = await db.query('SELECT * FROM feiras WHERE id = $1', [req.params.id]);
     if (!feira) return res.status(404).json({ erro: 'Feira não encontrada' });
 
-    const itens = db.prepare(`
-      SELECT * FROM itens_feira WHERE feira_id = ? ORDER BY nome_produto
-    `).all(req.params.id);
+    const { rows: itens } = await db.query(
+      'SELECT * FROM itens_feira WHERE feira_id = $1 ORDER BY nome_produto',
+      [req.params.id]
+    );
 
     res.json({ ...feira, itens });
   } catch (e) {
@@ -42,42 +43,44 @@ router.post('/registrar', [
   body('valor_total').isFloat({ min: 0 }),
   body('itens').isArray(),
   validar
-], (req, res) => {
+], async (req, res) => {
+  const client = await db.connect();
   try {
     const { data, valor_total, itens } = req.body;
 
-    const registrar = db.transaction(() => {
-      const result = db.prepare(`
-        INSERT INTO feiras (data, valor_total) VALUES (?, ?)
-      `).run(data, valor_total);
+    await client.query('BEGIN');
 
-      const feiraId = result.lastInsertRowid;
+    const { rows: [feiraRow] } = await client.query(
+      'INSERT INTO feiras (data, valor_total) VALUES ($1, $2) RETURNING id',
+      [data, valor_total]
+    );
+    const feiraId = feiraRow.id;
 
-      for (const item of itens) {
-        if (!item.nome_produto || typeof item.quantidade !== 'number' || typeof item.preco_unitario !== 'number') continue;
-        db.prepare(`
-          INSERT INTO itens_feira (feira_id, produto_id, nome_produto, quantidade, preco_unitario)
-          VALUES (?, ?, ?, ?, ?)
-        `).run(feiraId, item.produto_id || null, String(item.nome_produto).slice(0, 200), item.quantidade, item.preco_unitario);
-      }
+    for (const item of itens) {
+      if (!item.nome_produto || typeof item.quantidade !== 'number' || typeof item.preco_unitario !== 'number') continue;
+      await client.query(
+        'INSERT INTO itens_feira (feira_id, produto_id, nome_produto, quantidade, preco_unitario) VALUES ($1, $2, $3, $4, $5)',
+        [feiraId, item.produto_id || null, String(item.nome_produto).slice(0, 200), item.quantidade, item.preco_unitario]
+      );
+    }
 
-      db.prepare('DELETE FROM itens_lista_manual WHERE marcado = 1').run();
+    await client.query('DELETE FROM itens_lista_manual WHERE marcado = 1');
 
-      return feiraId;
-    });
-
-    const feiraId = registrar();
+    await client.query('COMMIT');
     res.status(201).json({ id: feiraId, ok: true });
   } catch (e) {
+    await client.query('ROLLBACK');
     res.status(500).json({ erro: 'Erro ao registrar feira' });
+  } finally {
+    client.release();
   }
 });
 
-router.get('/stats/gasto-categoria', (req, res) => {
+router.get('/stats/gasto-categoria', async (req, res) => {
   try {
-    const stats = db.prepare(`
+    const { rows } = await db.query(`
       SELECT p.categoria,
-             ROUND(AVG(if_total.total), 2) as media_mensal
+             ROUND(AVG(if_total.total)::numeric, 2) as media_mensal
       FROM (
         SELECT produto_id, SUM(quantidade * preco_unitario) as total, feira_id
         FROM itens_feira WHERE produto_id IS NOT NULL
@@ -86,8 +89,8 @@ router.get('/stats/gasto-categoria', (req, res) => {
       JOIN produtos p ON p.id = if_total.produto_id
       GROUP BY p.categoria
       ORDER BY media_mensal DESC
-    `).all();
-    res.json(stats);
+    `);
+    res.json(rows);
   } catch (e) {
     res.status(500).json({ erro: 'Erro ao calcular gastos' });
   }

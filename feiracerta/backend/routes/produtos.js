@@ -16,62 +16,57 @@ const validarProduto = [
   validar
 ];
 
-router.get('/', (req, res) => {
+router.get('/', async (req, res) => {
   try {
-    const produtos = db.prepare(`
-      SELECT * FROM produtos ORDER BY categoria, nome
-    `).all();
-    res.json(produtos);
+    const { rows } = await db.query('SELECT * FROM produtos ORDER BY categoria, nome');
+    res.json(rows);
   } catch (e) {
     res.status(500).json({ erro: 'Erro ao buscar produtos' });
   }
 });
 
-router.get('/buscar', (req, res) => {
+router.get('/buscar', async (req, res) => {
   try {
     const q = sanitizarTexto(req.query.q || '');
-    const produtos = db.prepare(`
-      SELECT * FROM produtos
-      WHERE nome LIKE ? OR codigo_barras = ?
-      ORDER BY nome LIMIT 20
-    `).all(`%${q}%`, q);
-    res.json(produtos);
+    const { rows } = await db.query(
+      'SELECT * FROM produtos WHERE nome ILIKE $1 OR codigo_barras = $2 ORDER BY nome LIMIT 20',
+      [`%${q}%`, q]
+    );
+    res.json(rows);
   } catch (e) {
     res.status(500).json({ erro: 'Erro ao buscar produtos' });
   }
 });
 
-router.get('/categorias', (req, res) => {
+router.get('/categorias', async (req, res) => {
   try {
-    const cats = db.prepare(`
-      SELECT DISTINCT categoria FROM produtos ORDER BY categoria
-    `).all().map(r => r.categoria);
-    res.json(cats);
+    const { rows } = await db.query('SELECT DISTINCT categoria FROM produtos ORDER BY categoria');
+    res.json(rows.map(r => r.categoria));
   } catch (e) {
     res.status(500).json({ erro: 'Erro ao buscar categorias' });
   }
 });
 
-router.get('/abaixo-minimo', (req, res) => {
+router.get('/abaixo-minimo', async (req, res) => {
   try {
-    const produtos = db.prepare(`
-      SELECT * FROM produtos WHERE quantidade_atual < quantidade_minima ORDER BY categoria, nome
-    `).all();
-    res.json(produtos);
+    const { rows } = await db.query(
+      'SELECT * FROM produtos WHERE quantidade_atual < quantidade_minima ORDER BY categoria, nome'
+    );
+    res.json(rows);
   } catch (e) {
     res.status(500).json({ erro: 'Erro ao buscar produtos' });
   }
 });
 
-router.get('/:id', [param('id').isInt({ min: 1 }), validar], (req, res) => {
+router.get('/:id', [param('id').isInt({ min: 1 }), validar], async (req, res) => {
   try {
-    const produto = db.prepare('SELECT * FROM produtos WHERE id = ?').get(req.params.id);
+    const { rows: [produto] } = await db.query('SELECT * FROM produtos WHERE id = $1', [req.params.id]);
     if (!produto) return res.status(404).json({ erro: 'Produto não encontrado' });
 
-    const historico = db.prepare(`
-      SELECT preco, registrado_em FROM historico_precos
-      WHERE produto_id = ? ORDER BY registrado_em ASC LIMIT 50
-    `).all(req.params.id);
+    const { rows: historico } = await db.query(
+      'SELECT preco, registrado_em FROM historico_precos WHERE produto_id = $1 ORDER BY registrado_em ASC LIMIT 50',
+      [req.params.id]
+    );
 
     res.json({ ...produto, historico_precos: historico });
   } catch (e) {
@@ -79,79 +74,82 @@ router.get('/:id', [param('id').isInt({ min: 1 }), validar], (req, res) => {
   }
 });
 
-router.post('/', validarProduto, (req, res) => {
+router.post('/', validarProduto, async (req, res) => {
   try {
     const { nome, categoria, unidade, quantidade_atual, quantidade_minima, preco, marca, codigo_barras } = req.body;
 
     if (codigo_barras) {
-      const existente = db.prepare('SELECT id FROM produtos WHERE codigo_barras = ?').get(codigo_barras);
-      if (existente) {
-        return res.status(409).json({ erro: 'Produto com este código de barras já existe', id: existente.id });
+      const { rows } = await db.query('SELECT id FROM produtos WHERE codigo_barras = $1', [codigo_barras]);
+      if (rows[0]) {
+        return res.status(409).json({ erro: 'Produto com este código de barras já existe', id: rows[0].id });
       }
     }
 
-    const result = db.prepare(`
-      INSERT INTO produtos (nome, categoria, unidade, quantidade_atual, quantidade_minima, preco, marca, codigo_barras)
-      VALUES (?, ?, ?, ?, ?, ?, ?, ?)
-    `).run(
-      sanitizarTexto(nome), sanitizarTexto(categoria), unidade,
-      quantidade_atual, quantidade_minima, preco,
-      marca ? sanitizarTexto(marca) : null,
-      codigo_barras ? sanitizarTexto(codigo_barras) : null
+    const { rows: [novo] } = await db.query(
+      `INSERT INTO produtos (nome, categoria, unidade, quantidade_atual, quantidade_minima, preco, marca, codigo_barras)
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8) RETURNING id`,
+      [
+        sanitizarTexto(nome), sanitizarTexto(categoria), unidade,
+        quantidade_atual, quantidade_minima, preco,
+        marca ? sanitizarTexto(marca) : null,
+        codigo_barras ? sanitizarTexto(codigo_barras) : null
+      ]
     );
 
     if (preco > 0) {
-      db.prepare('INSERT INTO historico_precos (produto_id, preco) VALUES (?, ?)').run(result.lastInsertRowid, preco);
+      await db.query('INSERT INTO historico_precos (produto_id, preco) VALUES ($1, $2)', [novo.id, preco]);
     }
 
-    const produto = db.prepare('SELECT * FROM produtos WHERE id = ?').get(result.lastInsertRowid);
+    const { rows: [produto] } = await db.query('SELECT * FROM produtos WHERE id = $1', [novo.id]);
     res.status(201).json(produto);
   } catch (e) {
     res.status(500).json({ erro: 'Erro ao salvar produto' });
   }
 });
 
-router.put('/:id', [param('id').isInt({ min: 1 }), ...validarProduto], (req, res) => {
+router.put('/:id', [param('id').isInt({ min: 1 }), ...validarProduto], async (req, res) => {
   try {
     const { nome, categoria, unidade, quantidade_atual, quantidade_minima, preco, marca, codigo_barras } = req.body;
     const id = req.params.id;
 
-    const atual = db.prepare('SELECT * FROM produtos WHERE id = ?').get(id);
+    const { rows: [atual] } = await db.query('SELECT * FROM produtos WHERE id = $1', [id]);
     if (!atual) return res.status(404).json({ erro: 'Produto não encontrado' });
 
     if (codigo_barras && codigo_barras !== atual.codigo_barras) {
-      const existente = db.prepare('SELECT id FROM produtos WHERE codigo_barras = ? AND id != ?').get(codigo_barras, id);
-      if (existente) {
-        return res.status(409).json({ erro: 'Código de barras já usado por outro produto', id: existente.id });
+      const { rows } = await db.query('SELECT id FROM produtos WHERE codigo_barras = $1 AND id != $2', [codigo_barras, id]);
+      if (rows[0]) {
+        return res.status(409).json({ erro: 'Código de barras já usado por outro produto', id: rows[0].id });
       }
     }
 
-    db.prepare(`
-      UPDATE produtos SET nome=?, categoria=?, unidade=?, quantidade_atual=?, quantidade_minima=?,
-      preco=?, marca=?, codigo_barras=?, atualizado_em=datetime('now','localtime') WHERE id=?
-    `).run(
-      sanitizarTexto(nome), sanitizarTexto(categoria), unidade,
-      quantidade_atual, quantidade_minima, preco,
-      marca ? sanitizarTexto(marca) : null,
-      codigo_barras ? sanitizarTexto(codigo_barras) : null,
-      id
+    await db.query(
+      `UPDATE produtos SET nome=$1, categoria=$2, unidade=$3, quantidade_atual=$4, quantidade_minima=$5,
+       preco=$6, marca=$7, codigo_barras=$8, atualizado_em=NOW() WHERE id=$9`,
+      [
+        sanitizarTexto(nome), sanitizarTexto(categoria), unidade,
+        quantidade_atual, quantidade_minima, preco,
+        marca ? sanitizarTexto(marca) : null,
+        codigo_barras ? sanitizarTexto(codigo_barras) : null,
+        id
+      ]
     );
 
     if (preco !== atual.preco) {
-      db.prepare('INSERT INTO historico_precos (produto_id, preco) VALUES (?, ?)').run(id, preco);
+      await db.query('INSERT INTO historico_precos (produto_id, preco) VALUES ($1, $2)', [id, preco]);
     }
 
-    res.json(db.prepare('SELECT * FROM produtos WHERE id = ?').get(id));
+    const { rows: [produto] } = await db.query('SELECT * FROM produtos WHERE id = $1', [id]);
+    res.json(produto);
   } catch (e) {
     res.status(500).json({ erro: 'Erro ao atualizar produto' });
   }
 });
 
-router.delete('/:id', [param('id').isInt({ min: 1 }), validar], (req, res) => {
+router.delete('/:id', [param('id').isInt({ min: 1 }), validar], async (req, res) => {
   try {
-    const produto = db.prepare('SELECT id FROM produtos WHERE id = ?').get(req.params.id);
-    if (!produto) return res.status(404).json({ erro: 'Produto não encontrado' });
-    db.prepare('DELETE FROM produtos WHERE id = ?').run(req.params.id);
+    const { rows } = await db.query('SELECT id FROM produtos WHERE id = $1', [req.params.id]);
+    if (!rows[0]) return res.status(404).json({ erro: 'Produto não encontrado' });
+    await db.query('DELETE FROM produtos WHERE id = $1', [req.params.id]);
     res.json({ ok: true });
   } catch (e) {
     res.status(500).json({ erro: 'Erro ao excluir produto' });

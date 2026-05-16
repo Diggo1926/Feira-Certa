@@ -8,35 +8,38 @@ router.post('/registrar', [
   body('produto_id').isInt({ min: 1 }),
   body('quantidade_nova').isFloat({ min: 0 }),
   validar
-], (req, res) => {
+], async (req, res) => {
   try {
     const { produto_id, quantidade_nova } = req.body;
-    const produto = db.prepare('SELECT * FROM produtos WHERE id = ?').get(produto_id);
+    const { rows: [produto] } = await db.query('SELECT * FROM produtos WHERE id = $1', [produto_id]);
     if (!produto) return res.status(404).json({ erro: 'Produto não encontrado' });
 
     const anterior = produto.quantidade_atual;
 
-    db.prepare(`
-      UPDATE produtos SET quantidade_atual = ?, atualizado_em = datetime('now','localtime') WHERE id = ?
-    `).run(quantidade_nova, produto_id);
+    await db.query(
+      'UPDATE produtos SET quantidade_atual = $1, atualizado_em = NOW() WHERE id = $2',
+      [quantidade_nova, produto_id]
+    );
 
-    db.prepare(`
-      INSERT INTO registros_consumo (produto_id, quantidade_anterior, quantidade_nova) VALUES (?, ?, ?)
-    `).run(produto_id, anterior, quantidade_nova);
+    await db.query(
+      'INSERT INTO registros_consumo (produto_id, quantidade_anterior, quantidade_nova) VALUES ($1, $2, $3)',
+      [produto_id, anterior, quantidade_nova]
+    );
 
-    const atualizado = db.prepare('SELECT * FROM produtos WHERE id = ?').get(produto_id);
+    const { rows: [atualizado] } = await db.query('SELECT * FROM produtos WHERE id = $1', [produto_id]);
     res.json({ ok: true, produto: atualizado });
   } catch (e) {
     res.status(500).json({ erro: 'Erro ao registrar consumo' });
   }
 });
 
-router.get('/previsao/:id', [param('id').isInt({ min: 1 }), validar], (req, res) => {
+router.get('/previsao/:id', [param('id').isInt({ min: 1 }), validar], async (req, res) => {
   try {
-    const registros = db.prepare(`
-      SELECT quantidade_anterior, quantidade_nova, registrado_em FROM registros_consumo
-      WHERE produto_id = ? ORDER BY registrado_em DESC LIMIT 30
-    `).all(req.params.id);
+    const { rows: registros } = await db.query(
+      `SELECT quantidade_anterior, quantidade_nova, registrado_em FROM registros_consumo
+       WHERE produto_id = $1 ORDER BY registrado_em DESC LIMIT 30`,
+      [req.params.id]
+    );
 
     if (registros.length < 2) {
       return res.json({ consumo_medio_mensal: null, sugestao_quantidade: null });

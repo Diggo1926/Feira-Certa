@@ -78,7 +78,6 @@ router.post('/processar', [
   try {
     const { url } = req.body;
 
-    // Validar que a URL é da SEFAZ
     const urlObj = new URL(url);
     const dominiosPermitidos = ['nfce.sefaz.se.gov.br', 'www.sefaz.se.gov.br', 'nfe.fazenda.gov.br'];
     if (!dominiosPermitidos.some(d => urlObj.hostname.endsWith(d))) {
@@ -92,18 +91,13 @@ router.post('/processar', [
       return res.status(422).json({ erro: 'Não foi possível extrair produtos desta nota. Tente o registro manual.' });
     }
 
-    // Cruzar com estoque
-    const resultado = produtos.map(p => {
-      const existente = db.prepare(`
-        SELECT * FROM produtos WHERE LOWER(nome) = LOWER(?) OR LOWER(nome) LIKE LOWER(?)
-      `).get(p.nome, `%${p.nome.split(' ')[0]}%`);
-
-      return {
-        ...p,
-        produto_existente: existente || null,
-        novo: !existente
-      };
-    });
+    const resultado = await Promise.all(produtos.map(async p => {
+      const { rows: [existente] } = await db.query(
+        'SELECT * FROM produtos WHERE nome ILIKE $1 OR nome ILIKE $2',
+        [p.nome, `%${p.nome.split(' ')[0]}%`]
+      );
+      return { ...p, produto_existente: existente || null, novo: !existente };
+    }));
 
     res.json({ produtos: resultado, total: produtos.reduce((s, p) => s + p.preco_unitario * p.quantidade, 0) });
   } catch (e) {
@@ -121,54 +115,66 @@ router.post('/confirmar', [
   body('produtos').isArray({ min: 1 }),
   body('data').isISO8601(),
   validar
-], (req, res) => {
+], async (req, res) => {
+  const client = await db.connect();
   try {
     const { produtos, data } = req.body;
     const valorTotal = produtos.reduce((s, p) => s + (p.preco_unitario * p.quantidade), 0);
 
-    const processar = db.transaction(() => {
-      const feiraResult = db.prepare('INSERT INTO feiras (data, valor_total) VALUES (?, ?)').run(data, valorTotal);
-      const feiraId = feiraResult.lastInsertRowid;
+    await client.query('BEGIN');
 
-      for (const p of produtos) {
-        if (!p.nome || typeof p.quantidade !== 'number') continue;
+    const { rows: [feiraRow] } = await client.query(
+      'INSERT INTO feiras (data, valor_total) VALUES ($1, $2) RETURNING id',
+      [data, valorTotal]
+    );
+    const feiraId = feiraRow.id;
 
-        let produtoId = p.produto_id || null;
+    for (const p of produtos) {
+      if (!p.nome || typeof p.quantidade !== 'number') continue;
 
-        if (produtoId) {
-          const prod = db.prepare('SELECT * FROM produtos WHERE id = ?').get(produtoId);
-          if (prod) {
-            const novaQtd = prod.quantidade_atual + p.quantidade;
-            db.prepare(`
-              UPDATE produtos SET quantidade_atual = ?, preco = ?, atualizado_em = datetime('now','localtime') WHERE id = ?
-            `).run(novaQtd, p.preco_unitario, produtoId);
+      let produtoId = p.produto_id || null;
 
-            if (p.preco_unitario !== prod.preco) {
-              db.prepare('INSERT INTO historico_precos (produto_id, preco) VALUES (?, ?)').run(produtoId, p.preco_unitario);
-            }
+      if (produtoId) {
+        const { rows: [prod] } = await client.query('SELECT * FROM produtos WHERE id = $1', [produtoId]);
+        if (prod) {
+          const novaQtd = prod.quantidade_atual + p.quantidade;
+          await client.query(
+            'UPDATE produtos SET quantidade_atual = $1, preco = $2, atualizado_em = NOW() WHERE id = $3',
+            [novaQtd, p.preco_unitario, produtoId]
+          );
+          if (p.preco_unitario !== prod.preco) {
+            await client.query(
+              'INSERT INTO historico_precos (produto_id, preco) VALUES ($1, $2)',
+              [produtoId, p.preco_unitario]
+            );
           }
-        } else if (p.cadastrar && p.categoria) {
-          const result = db.prepare(`
-            INSERT INTO produtos (nome, categoria, unidade, quantidade_atual, quantidade_minima, preco)
-            VALUES (?, ?, 'Unidade', ?, ?, ?)
-          `).run(sanitizarTexto(p.nome), sanitizarTexto(p.categoria), p.quantidade, p.quantidade_minima || 1, p.preco_unitario);
-          produtoId = result.lastInsertRowid;
-          db.prepare('INSERT INTO historico_precos (produto_id, preco) VALUES (?, ?)').run(produtoId, p.preco_unitario);
         }
-
-        db.prepare(`
-          INSERT INTO itens_feira (feira_id, produto_id, nome_produto, quantidade, preco_unitario)
-          VALUES (?, ?, ?, ?, ?)
-        `).run(feiraId, produtoId, String(p.nome).slice(0, 200), p.quantidade, p.preco_unitario);
+      } else if (p.cadastrar && p.categoria) {
+        const { rows: [novo] } = await client.query(
+          `INSERT INTO produtos (nome, categoria, unidade, quantidade_atual, quantidade_minima, preco)
+           VALUES ($1, $2, 'Unidade', $3, $4, $5) RETURNING id`,
+          [sanitizarTexto(p.nome), sanitizarTexto(p.categoria), p.quantidade, p.quantidade_minima || 1, p.preco_unitario]
+        );
+        produtoId = novo.id;
+        await client.query(
+          'INSERT INTO historico_precos (produto_id, preco) VALUES ($1, $2)',
+          [produtoId, p.preco_unitario]
+        );
       }
 
-      return feiraId;
-    });
+      await client.query(
+        'INSERT INTO itens_feira (feira_id, produto_id, nome_produto, quantidade, preco_unitario) VALUES ($1, $2, $3, $4, $5)',
+        [feiraId, produtoId, String(p.nome).slice(0, 200), p.quantidade, p.preco_unitario]
+      );
+    }
 
-    const feiraId = processar();
+    await client.query('COMMIT');
     res.json({ ok: true, feira_id: feiraId });
   } catch (e) {
+    await client.query('ROLLBACK');
     res.status(500).json({ erro: 'Erro ao confirmar feira' });
+  } finally {
+    client.release();
   }
 });
 

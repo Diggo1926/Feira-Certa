@@ -77,8 +77,17 @@ app.use((err, req, res, next) => {
   res.status(500).json({ erro: 'Erro interno do servidor' });
 });
 
-app.listen(PORT, () => {
-  console.log(`FeiraCerta rodando na porta ${PORT}`);
-});
+const { initDB } = require('./db/database');
+
+initDB()
+  .then(() => {
+    app.listen(PORT, () => {
+      console.log(`FeiraCerta rodando na porta ${PORT}`);
+    });
+  })
+  .catch(err => {
+    console.error('Falha ao inicializar banco de dados:', err);
+    process.exit(1);
+  });
 
 module.exports = app;

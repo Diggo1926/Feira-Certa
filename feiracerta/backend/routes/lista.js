@@ -5,9 +5,9 @@ const { validar, sanitizarTexto } = require('../middleware/validacao');
 const db = require('../db/database');
 const PDFDocument = require('pdfkit');
 
-router.get('/', (req, res) => {
+router.get('/', async (req, res) => {
   try {
-    const automaticos = db.prepare(`
+    const { rows: automaticos } = await db.query(`
       SELECT p.id, p.nome, p.categoria, p.unidade, p.preco,
              p.quantidade_atual, p.quantidade_minima,
              (p.quantidade_minima - p.quantidade_atual) as quantidade_sugerida,
@@ -15,11 +15,11 @@ router.get('/', (req, res) => {
       FROM produtos p
       WHERE p.quantidade_atual < p.quantidade_minima
       ORDER BY p.categoria, p.nome
-    `).all();
+    `);
 
-    const manuais = db.prepare(`
-      SELECT id, nome, quantidade, marcado, 'manual' as tipo FROM itens_lista_manual ORDER BY criado_em
-    `).all();
+    const { rows: manuais } = await db.query(
+      `SELECT id, nome, quantidade, marcado, 'manual' as tipo FROM itens_lista_manual ORDER BY criado_em`
+    );
 
     res.json({ automaticos, manuais });
   } catch (e) {
@@ -31,49 +31,53 @@ router.post('/manual', [
   body('nome').trim().notEmpty().isLength({ max: 200 }),
   body('quantidade').trim().notEmpty().isLength({ max: 50 }),
   validar
-], (req, res) => {
+], async (req, res) => {
   try {
     const { nome, quantidade } = req.body;
-    const result = db.prepare(`
-      INSERT INTO itens_lista_manual (nome, quantidade) VALUES (?, ?)
-    `).run(sanitizarTexto(nome), sanitizarTexto(quantidade));
-    res.status(201).json({ id: result.lastInsertRowid, nome, quantidade, marcado: 0 });
+    const { rows: [novo] } = await db.query(
+      'INSERT INTO itens_lista_manual (nome, quantidade) VALUES ($1, $2) RETURNING id',
+      [sanitizarTexto(nome), sanitizarTexto(quantidade)]
+    );
+    res.status(201).json({ id: novo.id, nome, quantidade, marcado: 0 });
   } catch (e) {
     res.status(500).json({ erro: 'Erro ao adicionar item' });
   }
 });
 
-router.put('/manual/:id/marcar', [param('id').isInt({ min: 1 }), validar], (req, res) => {
+router.put('/manual/:id/marcar', [param('id').isInt({ min: 1 }), validar], async (req, res) => {
   try {
-    const item = db.prepare('SELECT id, marcado FROM itens_lista_manual WHERE id = ?').get(req.params.id);
+    const { rows: [item] } = await db.query(
+      'SELECT id, marcado FROM itens_lista_manual WHERE id = $1',
+      [req.params.id]
+    );
     if (!item) return res.status(404).json({ erro: 'Item não encontrado' });
     const novoEstado = item.marcado ? 0 : 1;
-    db.prepare('UPDATE itens_lista_manual SET marcado = ? WHERE id = ?').run(novoEstado, req.params.id);
+    await db.query('UPDATE itens_lista_manual SET marcado = $1 WHERE id = $2', [novoEstado, req.params.id]);
     res.json({ ok: true, marcado: novoEstado });
   } catch (e) {
     res.status(500).json({ erro: 'Erro ao marcar item' });
   }
 });
 
-router.delete('/manual/:id', [param('id').isInt({ min: 1 }), validar], (req, res) => {
+router.delete('/manual/:id', [param('id').isInt({ min: 1 }), validar], async (req, res) => {
   try {
-    db.prepare('DELETE FROM itens_lista_manual WHERE id = ?').run(req.params.id);
+    await db.query('DELETE FROM itens_lista_manual WHERE id = $1', [req.params.id]);
     res.json({ ok: true });
   } catch (e) {
     res.status(500).json({ erro: 'Erro ao remover item' });
   }
 });
 
-router.get('/pdf', (req, res) => {
+router.get('/pdf', async (req, res) => {
   try {
-    const automaticos = db.prepare(`
+    const { rows: automaticos } = await db.query(`
       SELECT p.nome, p.unidade, (p.quantidade_minima - p.quantidade_atual) as qtd, p.preco
       FROM produtos p WHERE p.quantidade_atual < p.quantidade_minima ORDER BY p.nome
-    `).all();
+    `);
 
-    const manuais = db.prepare(`
-      SELECT nome, quantidade FROM itens_lista_manual ORDER BY criado_em
-    `).all();
+    const { rows: manuais } = await db.query(
+      'SELECT nome, quantidade FROM itens_lista_manual ORDER BY criado_em'
+    );
 
     const doc = new PDFDocument({ margin: 50, size: 'A4' });
     res.setHeader('Content-Type', 'application/pdf');
