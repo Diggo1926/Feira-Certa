@@ -24,18 +24,13 @@ app.use(helmet({
 }));
 
 // CORS
-const frontendUrl = process.env.FRONTEND_URL || '*';
 app.use(cors({
-  origin: (origin, callback) => {
-    if (!origin || frontendUrl === '*' || origin === frontendUrl) {
-      callback(null, true);
-    } else {
-      callback(new Error('Not allowed by CORS'));
-    }
-  },
-  methods: ['GET', 'POST', 'PUT', 'DELETE'],
-  allowedHeaders: ['Content-Type']
+  origin: process.env.FRONTEND_URL,
+  credentials: true,
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization']
 }));
+app.options('*', cors());
 
 // Body limit + charset
 app.use(express.json({ limit: '10kb' }));
