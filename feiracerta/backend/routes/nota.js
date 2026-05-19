@@ -7,7 +7,7 @@ const cheerio = require('cheerio');
 const db = require('../db/database');
 
 const SEFAZ_TIMEOUT = 15000;
-const MAX_RETRIES = 3;
+const MAX_RETRIES = 1;
 const SEFAZ_HEADERS = {
   'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
   'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
@@ -25,6 +25,7 @@ async function fetchComRetry(url, tentativas = MAX_RETRIES) {
       });
       return resp.data;
     } catch (e) {
+      console.log(`[SEFAZ] Erro tentativa ${i + 1}: ${e.code || e.message}`);
       if (i === tentativas - 1) throw e;
       await delay(1000 * (i + 1));
     }
@@ -102,8 +103,12 @@ router.post('/processar', [
       return res.status(400).json({ erro: 'URL deve ser da SEFAZ-SE' });
     }
 
+    console.log(`[SEFAZ] Buscando: ${url}`);
     const html = await fetchComRetry(url);
+    console.log(`[SEFAZ] HTML recebido: ${html.length} chars`);
+
     const produtos = parsearNFe(html);
+    console.log(`[SEFAZ] Produtos extraídos: ${produtos.length}`);
 
     if (produtos.length === 0) {
       return res.status(422).json({ erro: 'Não foi possível extrair produtos desta nota. Tente o registro manual.' });

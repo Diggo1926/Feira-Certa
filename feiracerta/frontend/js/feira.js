@@ -1,31 +1,64 @@
 let _scannerNota = null;
 let _produtosNota = [];
 
-function iniciarScannerNota() {
-  const div = document.getElementById('scanner-nota');
-  div.style.display = 'block';
-  div.innerHTML = '';
-  if (_scannerNota) _scannerNota.stop?.();
-
-  _scannerNota = new Html5Qrcode('scanner-nota');
-  _scannerNota.start(
-    { facingMode: 'environment' },
-    { fps: 10, qrbox: { width: 260, height: 200 } },
-    (decoded) => {
-      pararScannerNota();
-      processarURLDecodificada(decoded);
-    },
-    () => {}
-  ).catch(() => toast('Não foi possível acessar a câmera', 'erro'));
+function _mostrarErroCamara(msg) {
+  const existente = document.getElementById('erro-camera');
+  if (existente) existente.remove();
+  const div = document.createElement('div');
+  div.id = 'erro-camera';
+  div.style.cssText = 'color:#c0392b;font-size:13px;margin:8px 0;padding:10px;background:#fdf0f0;border-radius:8px;border:1px solid #e74c3c;text-align:center';
+  div.textContent = msg;
+  const scannerDiv = document.getElementById('scanner-nota');
+  scannerDiv?.insertAdjacentElement('afterend', div);
+  toast(msg, 'erro');
 }
 
-function pararScannerNota() {
+async function iniciarScannerNota() {
+  const div = document.getElementById('scanner-nota');
+  if (!div) { toast('Elemento do scanner não encontrado', 'erro'); return; }
+
+  if (typeof Html5Qrcode === 'undefined') {
+    _mostrarErroCamara('Biblioteca QR Code não carregou. Verifique a conexão com a internet.');
+    return;
+  }
+
+  // Aguarda parada do scanner anterior para evitar conflito
   if (_scannerNota) {
-    _scannerNota.stop?.().catch(() => {}).finally(() => {
-      _scannerNota = null;
-      const div = document.getElementById('scanner-nota');
-      if (div) { div.innerHTML = ''; div.style.display = 'none'; }
-    });
+    try { await _scannerNota.stop(); } catch (_) {}
+    _scannerNota = null;
+  }
+
+  const existente = document.getElementById('erro-camera');
+  if (existente) existente.remove();
+
+  div.innerHTML = '';
+  div.style.display = 'block';
+
+  try {
+    _scannerNota = new Html5Qrcode('scanner-nota');
+    await _scannerNota.start(
+      { facingMode: 'environment' },
+      { fps: 10, qrbox: { width: 260, height: 200 } },
+      (decoded) => {
+        pararScannerNota();
+        processarURLDecodificada(decoded);
+      },
+      () => {}
+    );
+  } catch (err) {
+    div.style.display = 'none';
+    _scannerNota = null;
+    const detalhe = err?.message || String(err);
+    _mostrarErroCamara('Câmera indisponível: ' + detalhe);
+  }
+}
+
+async function pararScannerNota() {
+  if (_scannerNota) {
+    try { await _scannerNota.stop(); } catch (_) {}
+    _scannerNota = null;
+    const div = document.getElementById('scanner-nota');
+    if (div) { div.innerHTML = ''; div.style.display = 'none'; }
   }
 }
 
@@ -42,15 +75,23 @@ async function _enviarParaProcessar(body) {
   etapa2.style.display = 'block';
   etapa2.innerHTML = loading();
 
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), 20000);
+
   try {
-    const res = await api('/api/nota/processar', { method: 'POST', body });
+    const res = await api('/api/nota/processar', { method: 'POST', body, signal: controller.signal });
+    clearTimeout(timer);
     _produtosNota = res.produtos;
     renderizarRevisaoNota(res);
   } catch (e) {
+    clearTimeout(timer);
+    const msg = e.name === 'AbortError'
+      ? 'Sem resposta em 20 segundos. A SEFAZ pode estar indisponível. Use a chave de acesso ou registre manualmente.'
+      : e.message;
     etapa2.innerHTML = `
       <div class="card-alerta card">
         <div class="card-alerta-titulo">Não foi possível processar a nota</div>
-        <div class="card-alerta-texto">${e.message}</div>
+        <div class="card-alerta-texto">${msg}</div>
       </div>
       <button class="btn btn-secundario" style="width:100%;margin-top:10px" onclick="voltarEtapa1()">Tentar Novamente</button>
       <button class="btn btn-primario" style="width:100%;margin-top:10px" onclick="mostrarRegistroManual()">Registrar Manualmente</button>`;
