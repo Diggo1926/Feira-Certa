@@ -8,6 +8,11 @@ const db = require('../db/database');
 
 const SEFAZ_TIMEOUT = 15000;
 const MAX_RETRIES = 3;
+const SEFAZ_HEADERS = {
+  'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
+  'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
+  'Accept-Language': 'pt-BR,pt;q=0.9'
+};
 
 async function fetchComRetry(url, tentativas = MAX_RETRIES) {
   const delay = (ms) => new Promise(r => setTimeout(r, ms));
@@ -15,7 +20,7 @@ async function fetchComRetry(url, tentativas = MAX_RETRIES) {
     try {
       const resp = await axios.get(url, {
         timeout: SEFAZ_TIMEOUT,
-        headers: { 'User-Agent': 'Mozilla/5.0 FeiraCerta/1.0' },
+        headers: SEFAZ_HEADERS,
         maxRedirects: 5
       });
       return resp.data;
@@ -72,15 +77,28 @@ function parsearNFe(html) {
 }
 
 router.post('/processar', [
-  body('url').isURL({ protocols: ['http', 'https'], require_protocol: true }),
+  body('url').optional().isURL({ protocols: ['http', 'https'], require_protocol: true }),
+  body('chave').optional().matches(/^\d{44}$/),
   validar
 ], async (req, res) => {
   try {
-    const { url } = req.body;
+    let { url, chave } = req.body;
+
+    if (!url && !chave) {
+      return res.status(400).json({ erro: 'Informe a URL ou chave de acesso da nota fiscal' });
+    }
+
+    if (!url && chave) {
+      url = `http://www.nfce.se.gov.br/nfce/consulta?chNFe=${chave}`;
+    }
 
     const urlObj = new URL(url);
-    const dominiosPermitidos = ['nfce.sefaz.se.gov.br', 'www.sefaz.se.gov.br', 'nfe.fazenda.gov.br'];
-    if (!dominiosPermitidos.some(d => urlObj.hostname.endsWith(d))) {
+    const dominiosPermitidos = [
+      'www.nfce.se.gov.br', 'nfce.se.gov.br',
+      'nfce.sefaz.se.gov.br', 'www.sefaz.se.gov.br',
+      'nfe.fazenda.gov.br'
+    ];
+    if (!dominiosPermitidos.some(d => urlObj.hostname === d)) {
       return res.status(400).json({ erro: 'URL deve ser da SEFAZ-SE' });
     }
 

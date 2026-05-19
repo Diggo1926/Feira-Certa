@@ -34,10 +34,7 @@ async function processarURLDecodificada(url) {
   await processarURLNota();
 }
 
-async function processarURLNota() {
-  const url = document.getElementById('url-nota').value.trim();
-  if (!url) { toast('Cole ou leia a URL da nota fiscal', 'erro'); return; }
-
+async function _enviarParaProcessar(body) {
   const etapa1 = document.getElementById('feira-etapa-1');
   const etapa2 = document.getElementById('feira-etapa-2');
 
@@ -46,7 +43,7 @@ async function processarURLNota() {
   etapa2.innerHTML = loading();
 
   try {
-    const res = await api('/api/nota/processar', { method: 'POST', body: { url } });
+    const res = await api('/api/nota/processar', { method: 'POST', body });
     _produtosNota = res.produtos;
     renderizarRevisaoNota(res);
   } catch (e) {
@@ -58,6 +55,18 @@ async function processarURLNota() {
       <button class="btn btn-secundario" style="width:100%;margin-top:10px" onclick="voltarEtapa1()">Tentar Novamente</button>
       <button class="btn btn-primario" style="width:100%;margin-top:10px" onclick="mostrarRegistroManual()">Registrar Manualmente</button>`;
   }
+}
+
+async function processarURLNota() {
+  const url = document.getElementById('url-nota').value.trim();
+  if (!url) { toast('Cole ou leia a URL da nota fiscal', 'erro'); return; }
+  await _enviarParaProcessar({ url });
+}
+
+async function processarChaveAcesso() {
+  const chave = document.getElementById('chave-nota').value.trim().replace(/\D/g, '');
+  if (chave.length !== 44) { toast('A chave de acesso deve ter exatamente 44 dígitos', 'erro'); return; }
+  await _enviarParaProcessar({ chave });
 }
 
 function voltarEtapa1() {
