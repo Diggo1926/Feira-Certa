@@ -32,7 +32,10 @@ app.use(cors({
 }));
 app.options('*', cors());
 
-// Body limit + charset
+// Large body limit for image upload route
+app.use('/api/nota/foto', express.json({ limit: '10mb' }));
+
+// Default body limit for all other routes
 app.use(express.json({ limit: '10kb' }));
 app.use(express.urlencoded({ extended: false, limit: '10kb' }));
 app.use((req, res, next) => {
