@@ -12,45 +12,57 @@ router.post('/foto', [
   body('mimeType').isIn(MIMES_PERMITIDOS).withMessage('Formato de imagem inválido (use JPEG, PNG ou WebP)'),
   validar
 ], async (req, res) => {
+  console.log('[GEMINI] Recebida requisição de foto');
+  console.log('[GEMINI] MimeType:', req.body.mimeType);
+  console.log('[GEMINI] Tamanho da imagem base64:', req.body.imagem?.length);
+
   const { imagem, mimeType } = req.body;
 
   const apiKey = process.env.GEMINI_API_KEY;
+  console.log('[GEMINI] API Key presente:', !!apiKey);
   if (!apiKey) return res.status(500).json({ erro: 'Gemini API não configurada no servidor' });
 
-  const prompt = `Você está analisando um cupom fiscal brasileiro. Extraia todos os produtos listados e retorne APENAS um JSON válido, sem texto adicional, no seguinte formato:
-{
-  "produtos": [
-    {
-      "nome": "nome do produto",
-      "quantidade": 1.0,
-      "preco_unitario": 0.00,
-      "preco_total": 0.00
-    }
-  ],
-  "valor_total": 0.00,
-  "data": "DD/MM/AAAA"
-}
-Normalize os nomes dos produtos: remova códigos de barras, abreviações excessivas e deixe o nome legível. Se não conseguir ler algum campo, use null.`;
+  const prompt = `Você está analisando um cupom fiscal brasileiro. Extraia todos os produtos listados e retorne APENAS um JSON válido, sem texto adicional, sem markdown, sem backticks, no seguinte formato: {"produtos":[{"nome":"nome do produto","quantidade":1.0,"preco_unitario":0.00,"preco_total":0.00}],"valor_total":0.00,"data":"DD/MM/AAAA"}. Normalize os nomes dos produtos removendo códigos e abreviações excessivas.`;
 
   try {
+    console.log('[GEMINI] Enviando requisição para a API...');
     const { data: geminiData } = await axios.post(
       `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${apiKey}`,
       {
-        contents: [{ parts: [{ inlineData: { mimeType, data: imagem } }, { text: prompt }] }]
+        contents: [{
+          parts: [
+            {
+              inline_data: {
+                mime_type: mimeType,
+                data: imagem
+              }
+            },
+            {
+              text: prompt
+            }
+          ]
+        }]
       },
       { timeout: 30000 }
     );
 
+    console.log('[GEMINI] Resposta recebida, processando...');
     const text = geminiData?.candidates?.[0]?.content?.parts?.[0]?.text || '';
+    console.log('[GEMINI] Texto retornado (primeiros 200 chars):', text.slice(0, 200));
     const limpo = text.replace(/```json\s*/g, '').replace(/```\s*/g, '').trim();
     const match = limpo.match(/\{[\s\S]*\}/);
     if (!match) {
+      console.log('[GEMINI] Não encontrou JSON válido na resposta');
       return res.status(422).json({ erro: 'Não foi possível extrair os dados do cupom. Tente uma foto mais nítida e bem iluminada.' });
     }
 
     const dados = JSON.parse(match[0]);
+    console.log('[GEMINI] Dados extraídos com sucesso, produtos:', dados.produtos?.length);
     return res.json(dados);
   } catch (e) {
+    console.error('[GEMINI] Erro:', e.message);
+    console.error('[GEMINI] Status HTTP:', e.response?.status);
+    console.error('[GEMINI] Resposta de erro:', JSON.stringify(e.response?.data)?.slice(0, 500));
     if (e.response?.status === 400) return res.status(422).json({ erro: 'Imagem inválida ou ilegível pelo Gemini' });
     if (e.code === 'ECONNABORTED') return res.status(422).json({ erro: 'Tempo limite ao processar imagem. Tente novamente.' });
     return res.status(500).json({ erro: 'Erro ao processar imagem com IA' });
