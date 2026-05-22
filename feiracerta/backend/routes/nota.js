@@ -56,7 +56,14 @@ router.post('/foto', [
       return res.status(422).json({ erro: 'Não foi possível extrair os dados do cupom. Tente uma foto mais nítida e bem iluminada.' });
     }
 
-    const dados = JSON.parse(match[0]);
+    let dados;
+    try {
+      dados = JSON.parse(match[0]);
+    } catch (parseErr) {
+      console.log('[GEMINI] Erro ao fazer parse do JSON:', parseErr.message);
+      console.log('[GEMINI] Conteúdo que falhou no parse:', match[0].slice(0, 200));
+      return res.status(422).json({ erro: 'Não foi possível extrair os dados do cupom. Tente uma foto mais nítida e bem iluminada.' });
+    }
     console.log('[GEMINI] Dados extraídos com sucesso, produtos:', dados.produtos?.length);
     return res.json(dados);
   } catch (e) {
@@ -64,6 +71,7 @@ router.post('/foto', [
     console.error('[GEMINI] Status HTTP:', e.response?.status);
     console.error('[GEMINI] Resposta de erro:', JSON.stringify(e.response?.data)?.slice(0, 500));
     if (e.response?.status === 400) return res.status(422).json({ erro: 'Imagem inválida ou ilegível pelo Gemini' });
+    if (e.response?.status === 429) return res.status(429).json({ erro: 'Limite de requisições da IA atingido. Aguarde e tente novamente.' });
     if (e.code === 'ECONNABORTED') return res.status(422).json({ erro: 'Tempo limite ao processar imagem. Tente novamente.' });
     return res.status(500).json({ erro: 'Erro ao processar imagem com IA' });
   }
