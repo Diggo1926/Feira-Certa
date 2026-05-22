@@ -73,7 +73,8 @@ router.post('/foto', [
     if (e.response?.status === 400) return res.status(422).json({ erro: 'Imagem inválida ou ilegível pelo Gemini' });
     if (e.response?.status === 429) return res.status(429).json({ erro: 'Limite de requisições da IA atingido. Aguarde e tente novamente.' });
     if (e.code === 'ECONNABORTED') return res.status(422).json({ erro: 'Tempo limite ao processar imagem. Tente novamente.' });
-    return res.status(500).json({ erro: 'Erro ao processar imagem com IA' });
+    // DEBUG TEMPORÁRIO - remover após diagnóstico
+    return res.status(500).json({ erro: 'Erro ao processar imagem com IA', _debug: { msg: e.message, status: e.response?.status, data: JSON.stringify(e.response?.data)?.slice(0, 300) } });
   }
 });
 
