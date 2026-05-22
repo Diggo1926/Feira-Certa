@@ -127,7 +127,7 @@ async function ativarNotificacoes() {
 
 async function testarNotificacao() {
   if (Notification.permission === 'granted') {
-    new Notification('FeiraCerta', { body: 'Notificações funcionando!', icon: '/icons/icon-192.png' });
+    new Notification('Feira-Certa', { body: 'Notificações funcionando!', icon: '/icons/icon-192.png' });
   } else {
     toast('Ative as notificações primeiro', 'erro');
   }

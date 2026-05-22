@@ -1,4 +1,3 @@
-let _scannerConsumo = null;
 let _produtoSelecionadoConsumo = null;
 
 function abrirModalConsumo() {
@@ -11,7 +10,6 @@ function abrirModalConsumo() {
 
 function fecharModalConsumo() {
   document.getElementById('modal-consumo').classList.remove('aberto');
-  pararScannerConsumo();
   _produtoSelecionadoConsumo = null;
 }
 
@@ -90,36 +88,3 @@ document.getElementById('consumo-nova-qtd')?.addEventListener('keydown', e => {
   if (e.key === 'Enter') confirmarConsumo();
 });
 
-function abrirScannerConsumo() {
-  const div = document.getElementById('scanner-consumo');
-  div.style.display = 'block';
-  div.innerHTML = '';
-  if (_scannerConsumo) _scannerConsumo.stop?.();
-
-  _scannerConsumo = new Html5Qrcode('scanner-consumo');
-  _scannerConsumo.start(
-    { facingMode: 'environment' },
-    { fps: 10, qrbox: { width: 250, height: 150 } },
-    async (decoded) => {
-      pararScannerConsumo();
-      const produtos = await api(`/api/produtos/buscar?q=${encodeURIComponent(decoded)}`);
-      const p = produtos.find(x => x.codigo_barras === decoded);
-      if (p) {
-        selecionarProdutoConsumo(p.id, p.nome, p.quantidade_atual);
-      } else {
-        toast('Produto não encontrado para este código', 'erro');
-      }
-    },
-    () => {}
-  ).catch(() => toast('Não foi possível acessar a câmera', 'erro'));
-}
-
-function pararScannerConsumo() {
-  if (_scannerConsumo) {
-    _scannerConsumo.stop?.().catch(() => {}).finally(() => {
-      _scannerConsumo = null;
-      const div = document.getElementById('scanner-consumo');
-      if (div) { div.innerHTML = ''; div.style.display = 'none'; }
-    });
-  }
-}

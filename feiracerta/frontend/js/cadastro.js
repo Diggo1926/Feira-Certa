@@ -1,4 +1,3 @@
-let _scannerCadastro = null;
 let _produtoEditando = null;
 
 function novoCadastro() {
@@ -11,7 +10,6 @@ function novoCadastro() {
   document.getElementById('c-unidade').value = 'Unidade';
   document.getElementById('c-categoria-nova').style.display = 'none';
   document.getElementById('historico-precos-cadastro').style.display = 'none';
-  pararScannerCadastro();
 }
 
 function preencherFormularioCadastro(p) {
@@ -82,7 +80,6 @@ async function salvarProduto() {
       toast('Produto cadastrado!', 'sucesso');
       novoCadastro();
     }
-    pararScannerCadastro();
   } catch (e) {
     if (e.message.includes('código de barras')) {
       toast('Código de barras já cadastrado em outro produto', 'erro');
@@ -92,35 +89,6 @@ async function salvarProduto() {
   }
 }
 
-function abrirScannerCadastro() {
-  const div = document.getElementById('scanner-cadastro');
-  div.style.display = 'block';
-  div.innerHTML = '';
-  if (_scannerCadastro) _scannerCadastro.stop?.();
-
-  _scannerCadastro = new Html5Qrcode('scanner-cadastro');
-  _scannerCadastro.start(
-    { facingMode: 'environment' },
-    { fps: 10, qrbox: { width: 250, height: 150 } },
-    (decoded) => {
-      document.getElementById('c-codigo').value = decoded;
-      pararScannerCadastro();
-      toast('Código lido: ' + decoded, 'sucesso');
-      verificarCodigoExistente(decoded);
-    },
-    () => {}
-  ).catch(() => toast('Não foi possível acessar a câmera', 'erro'));
-}
-
-function pararScannerCadastro() {
-  if (_scannerCadastro) {
-    _scannerCadastro.stop?.().catch(() => {}).finally(() => {
-      _scannerCadastro = null;
-      const div = document.getElementById('scanner-cadastro');
-      if (div) { div.innerHTML = ''; div.style.display = 'none'; }
-    });
-  }
-}
 
 async function verificarCodigoExistente(codigo) {
   try {

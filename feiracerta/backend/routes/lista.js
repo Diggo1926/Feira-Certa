@@ -84,7 +84,7 @@ router.get('/pdf', async (req, res) => {
     res.setHeader('Content-Disposition', 'attachment; filename="lista-compras.pdf"');
     doc.pipe(res);
 
-    doc.font('Helvetica-Bold').fontSize(20).text('Lista de Compras — FeiraCerta', { align: 'center' });
+    doc.font('Helvetica-Bold').fontSize(20).text('Lista de Compras — Feira-Certa', { align: 'center' });
     doc.moveDown(0.5);
     doc.font('Helvetica').fontSize(10).fillColor('#7A6A5A')
        .text(`Gerado em: ${new Date().toLocaleDateString('pt-BR')}`, { align: 'center' });

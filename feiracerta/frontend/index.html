@@ -7,11 +7,9 @@
   <meta name="mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="default">
-  <title>FeiraCerta</title>
+  <title>Feira-Certa</title>
   <link rel="manifest" href="/manifest.json">
   <link rel="stylesheet" href="/css/style.css">
-  <!-- html5-qrcode via CDN -->
-  <script src="https://unpkg.com/html5-qrcode@2.3.8/html5-qrcode.min.js"></script>
 </head>
 <body>
 
@@ -21,7 +19,7 @@
 <section class="pagina ativa" id="pg-inicio">
   <div class="tela-header">
     <div>
-      <div class="tela-titulo">FeiraCerta</div>
+      <div class="tela-titulo">Feira-Certa</div>
       <div style="font-size:13px;color:var(--texto-sec)">Seu estoque doméstico</div>
     </div>
     <button class="btn btn-secundario btn-sm" onclick="irPara('pg-config')" style="margin-left:auto">
@@ -141,14 +139,7 @@
 
     <div class="campo">
       <label>Código de Barras</label>
-      <div style="display:flex;gap:8px">
-        <input type="text" id="c-codigo" placeholder="EAN13 ou QR Code" maxlength="50" style="flex:1">
-        <button class="btn btn-secundario btn-sm" onclick="abrirScannerCadastro()" type="button">
-          <svg viewBox="0 0 24 24" fill="none" stroke-width="2" width="18" height="18"><rect x="2" y="2" width="5" height="5"/><rect x="17" y="2" width="5" height="5"/><rect x="2" y="17" width="5" height="5"/><path d="M2 9h2m4 0h2m4 0h2m2 0h2M9 2v2m0 4v2m0 4v2m0 4v2"/></svg>
-          Ler
-        </button>
-      </div>
-      <div id="scanner-cadastro" style="margin-top:10px;display:none"></div>
+      <input type="text" id="c-codigo" placeholder="EAN13" maxlength="50">
     </div>
 
     <div id="historico-precos-cadastro" style="display:none">
@@ -350,14 +341,6 @@
     <div class="campo-busca" style="margin-bottom:10px">
       <svg viewBox="0 0 24 24" fill="none" stroke-width="2"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
       <input type="text" id="busca-consumo" placeholder="Buscar produto..." oninput="buscarProdutoConsumo(this.value)">
-    </div>
-
-    <div style="margin-bottom:10px">
-      <button class="btn btn-secundario btn-sm" onclick="abrirScannerConsumo()" style="width:100%">
-        <svg viewBox="0 0 24 24" fill="none" stroke-width="2" width="16" height="16"><rect x="2" y="2" width="5" height="5"/><rect x="17" y="2" width="5" height="5"/><rect x="2" y="17" width="5" height="5"/><path d="M2 9h2m4 0h2m4 0h2m2 0h2M9 2v2m0 4v2m0 4v2m0 4v2"/></svg>
-        Ler Código de Barras
-      </button>
-      <div id="scanner-consumo" style="margin-top:8px;display:none"></div>
     </div>
 
     <div id="resultados-busca-consumo"></div>

@@ -25,7 +25,7 @@ self.addEventListener('fetch', e => {
 });
 
 self.addEventListener('push', e => {
-  const data = e.data ? e.data.json() : { title: 'FeiraCerta', body: 'Nova notificação' };
+  const data = e.data ? e.data.json() : { title: 'Feira-Certa', body: 'Nova notificação' };
   e.waitUntil(
     self.registration.showNotification(data.title, {
       body: data.body,
@@ -49,14 +49,14 @@ function agendarVerificacoes() {
       const dados = await resp.json();
 
       if (dados.abaixo_minimo >= 5) {
-        self.registration.showNotification('FeiraCerta — Estoque Baixo', {
+        self.registration.showNotification('Feira-Certa — Estoque Baixo', {
           body: `${dados.abaixo_minimo} itens abaixo do mínimo. Hora de fazer a feira!`,
           icon: '/icons/icon-192.png'
         });
       }
 
       if (dados.dias_desde_ultima_feira !== null && dados.dias_desde_ultima_feira >= 28) {
-        self.registration.showNotification('FeiraCerta — Faz tempo!', {
+        self.registration.showNotification('Feira-Certa — Faz tempo!', {
           body: `Sua última feira foi há ${dados.dias_desde_ultima_feira} dias. Que tal fazer uma nova?`,
           icon: '/icons/icon-192.png'
         });

@@ -65,7 +65,7 @@ router.post('/push/subscribe', [
 router.post('/push/test', async (req, res) => {
   try {
     const { rows: subs } = await db.query('SELECT * FROM push_subscriptions');
-    const payload = JSON.stringify({ title: 'FeiraCerta', body: 'Notificações ativadas!' });
+    const payload = JSON.stringify({ title: 'Feira-Certa', body: 'Notificações ativadas!' });
 
     subs.forEach(async (s) => {
       try {

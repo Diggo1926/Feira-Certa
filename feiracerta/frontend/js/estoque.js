@@ -1,5 +1,4 @@
 let _produtos = [];
-let _scannerEstoqueAberto = null;
 
 async function carregarEstoque(filtro = '') {
   const el = document.getElementById('lista-estoque');

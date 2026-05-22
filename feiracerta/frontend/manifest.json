@@ -1,6 +1,6 @@
 {
-  "name": "FeiraCerta",
-  "short_name": "FeiraCerta",
+  "name": "Feira-Certa",
+  "short_name": "Feira-Certa",
   "description": "Controle de estoque doméstico inteligente",
   "start_url": "/",
   "display": "standalone",

@@ -173,7 +173,7 @@ async function registrarFeiraDaLista() {
 
 async function compartilharWhatsapp() {
   const { automaticos, manuais } = _listaAtual;
-  let texto = '🛒 *Lista de Compras — FeiraCerta*\n\n';
+  let texto = '🛒 *Lista de Compras — Feira-Certa*\n\n';
   if (automaticos.length) {
     texto += '*Do Estoque:*\n';
     automaticos.forEach(i => { texto += `• ${i.nome} — ${Math.ceil(i.quantidade_sugerida)} ${i.unidade}\n`; });

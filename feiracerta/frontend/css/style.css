@@ -561,10 +561,6 @@ input::placeholder { color: var(--texto-sec); opacity: 0.6; }
   overflow: hidden;
 }
 
-/* ===== SCANNER ===== */
-#reader { width: 100% !important; }
-#reader * { border-radius: var(--radius-sm) !important; }
-
 /* ===== BOTÕES DE AÇÃO DA LISTA ===== */
 .acoes-lista {
   display: grid;
@@ -650,17 +646,6 @@ input::placeholder { color: var(--texto-sec); opacity: 0.6; }
   border-top: 1px solid var(--borda);
   margin-top: 8px;
 }
-
-/* ===== SCANNER BLOCK ===== */
-.scanner-area {
-  background: var(--superficie);
-  border: 2px dashed var(--borda);
-  border-radius: var(--radius);
-  padding: 24px;
-  text-align: center;
-  margin-bottom: 14px;
-}
-.scanner-area p { font-size: 14px; color: var(--texto-sec); margin-top: 12px; }
 
 /* ===== PRODUTO REVISÃO (NOTA) ===== */
 .nota-produto-card {
