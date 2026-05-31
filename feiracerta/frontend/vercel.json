@@ -1,5 +1,5 @@
 {
-  "buildCommand": "echo \"window.ENV_API_URL = '$API_URL';\" > env.js",
+  "buildCommand": "echo \"window.ENV_API_URL = '$API_URL'; window.ENV_APP_SECRET_TOKEN = '$APP_SECRET_TOKEN';\" > env.js",
   "outputDirectory": ".",
   "rewrites": [
     { "source": "/(.*)", "destination": "/index.html" }
