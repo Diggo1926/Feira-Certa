@@ -1,4 +1,4 @@
-const API = window.ENV_API_URL || '';
+const API = (window.ENV || {}).API_URL || '';
 
 // ─── HTTP autenticado ──────────────────────────────────────────────────────
 
@@ -8,7 +8,7 @@ async function api(path, opts = {}) {
     ...resto,
     headers: {
       'Content-Type': 'application/json',
-      'X-App-Token': window.ENV_APP_SECRET_TOKEN || '',
+      'X-App-Token': (window.ENV || {}).APP_SECRET_TOKEN || '',
       ...(extraHeaders || {})
     },
     body: bodyData !== undefined ? JSON.stringify(bodyData) : undefined

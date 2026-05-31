@@ -144,8 +144,8 @@ function urlBase64ToUint8Array(base64String) {
 
 async function exportarBackup() {
   try {
-    const res = await fetch((window.ENV_API_URL || '') + '/api/config/backup/exportar', {
-      headers: { 'X-App-Token': window.ENV_APP_SECRET_TOKEN || '' }
+    const res = await fetch(((window.ENV || {}).API_URL || '') + '/api/config/backup/exportar', {
+      headers: { 'X-App-Token': (window.ENV || {}).APP_SECRET_TOKEN || '' }
     });
     if (!res.ok) throw new Error();
     const blob = await res.blob();

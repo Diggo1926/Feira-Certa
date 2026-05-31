@@ -188,8 +188,8 @@ async function compartilharWhatsapp() {
 
 async function exportarPDF() {
   try {
-    const res = await fetch((window.ENV_API_URL || '') + '/api/lista/pdf', {
-      headers: { 'X-App-Token': window.ENV_APP_SECRET_TOKEN || '' }
+    const res = await fetch(((window.ENV || {}).API_URL || '') + '/api/lista/pdf', {
+      headers: { 'X-App-Token': (window.ENV || {}).APP_SECRET_TOKEN || '' }
     });
     if (!res.ok) throw new Error();
     const blob = await res.blob();

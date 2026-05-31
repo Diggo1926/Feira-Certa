@@ -1,5 +1,5 @@
 {
-  "buildCommand": "echo \"window.ENV_API_URL = '$API_URL'; window.ENV_APP_SECRET_TOKEN = '$APP_SECRET_TOKEN';\" > env.js",
+  "buildCommand": "node -e \"const e=process.env,fs=require('fs');fs.writeFileSync('env.js','window.ENV='+JSON.stringify({API_URL:e.API_URL||'',APP_SECRET_TOKEN:e.APP_SECRET_TOKEN||''})+';');\"",
   "outputDirectory": ".",
   "rewrites": [
     { "source": "/(.*)", "destination": "/index.html" }
