@@ -28,7 +28,7 @@ app.use(cors({
   origin: process.env.FRONTEND_URL,
   credentials: true,
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
-  allowedHeaders: ['Content-Type', 'Authorization']
+  allowedHeaders: ['Content-Type', 'X-App-Token']
 }));
 app.options('*', cors());
 
@@ -61,13 +61,8 @@ const limiterStrict = rateLimit({
 app.use('/api/', limiter);
 app.use('/api/nota/', limiterStrict);
 
-const autenticar = require('./middleware/autenticacao');
-
-// Auth routes — sem proteção (login e refresh são públicos por natureza)
-app.use('/api/auth', require('./routes/auth'));
-
-// Todas as demais rotas /api exigem token válido
-app.use('/api', autenticar);
+// Todas as rotas /api exigem X-App-Token válido
+app.use('/api', require('./middleware/appToken'));
 
 app.use('/api/produtos', require('./routes/produtos'));
 app.use('/api/feiras', require('./routes/feiras'));
