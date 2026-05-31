@@ -15,14 +15,14 @@ async function carregarDashboard() {
     if (dados.abaixo_minimo >= 5) {
       alertasHtml += `
         <div class="card card-alerta">
-          <div class="card-alerta-titulo">⚠️ Estoque Baixo</div>
+          <div class="card-alerta-titulo" style="display:flex;align-items:center;gap:6px"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="15" height="15"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg> Estoque Baixo</div>
           <div class="card-alerta-texto">${dados.abaixo_minimo} itens abaixo do mínimo. Hora de fazer a feira!</div>
         </div>`;
     }
     if (dados.variacao_feira !== null && dados.variacao_feira > 10) {
       alertasHtml += `
         <div class="card card-alerta">
-          <div class="card-alerta-titulo">📈 Feira Mais Cara</div>
+          <div class="card-alerta-titulo" style="display:flex;align-items:center;gap:6px"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="15" height="15"><polyline points="23 6 13.5 15.5 8.5 10.5 1 18"/><polyline points="17 6 23 6 23 12"/></svg> Feira Mais Cara</div>
           <div class="card-alerta-texto">A última feira ficou ${dados.variacao_feira}% mais cara que a anterior.</div>
         </div>`;
     }

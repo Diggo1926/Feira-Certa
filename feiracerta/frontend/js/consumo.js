@@ -70,7 +70,7 @@ async function confirmarConsumo() {
     fecharModalConsumo();
 
     if (res.produto.quantidade_atual < res.produto.quantidade_minima) {
-      toast(`⚠️ ${res.produto.nome} está abaixo do mínimo!`, 'erro');
+      toast(`${res.produto.nome} está abaixo do mínimo!`, 'erro');
     } else {
       toast('Consumo registrado!', 'sucesso');
     }

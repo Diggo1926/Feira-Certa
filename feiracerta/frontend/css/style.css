@@ -543,12 +543,7 @@ input::placeholder { color: var(--texto-sec); opacity: 0.6; }
   background: var(--musgo);
   border-color: var(--musgo);
 }
-.modo-feira-item.marcado .modo-feira-check::after {
-  content: '✓';
-  color: white;
-  font-size: 20px;
-  font-weight: 700;
-}
+.modo-feira-check svg { display: block; }
 
 .modo-feira-nome { font-size: 20px; font-weight: 700; }
 .modo-feira-qtd { font-size: 15px; color: var(--texto-sec); margin-top: 4px; }

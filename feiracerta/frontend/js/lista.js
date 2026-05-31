@@ -25,7 +25,7 @@ function renderizarLista() {
       <div>
         <div style="font-size:12px;color:rgba(255,255,255,0.85);font-weight:600;text-transform:uppercase">Total Estimado</div>
         <div class="total-card-valor">${formatarMoeda(totalAuto)}</div>
-        <div style="font-size:12px;color:rgba(255,255,255,0.85)">${automaticos.length} itens do estoque${ultrapassou ? ' · ⚠️ Meta ultrapassada!' : ''}</div>
+        <div style="font-size:12px;color:rgba(255,255,255,0.85)">${automaticos.length} itens do estoque${ultrapassou ? ' · <svg style="vertical-align:middle" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" width="12" height="12"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg> Meta ultrapassada!' : ''}</div>
       </div>
       <svg viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2" width="36" height="36"><path d="M1 3h2l.4 2M7 13h10l4-8H5.4M7 13L5.4 5M7 13l-2.293 2.293c-.63.63-.184 1.707.707 1.707H17m0 0a2 2 0 1 0 0 4 2 2 0 0 0 0-4zm-10 2a2 2 0 1 0 0 4 2 2 0 0 0 0-4z"/></svg>
     </div>`;
@@ -173,7 +173,7 @@ async function registrarFeiraDaLista() {
 
 async function compartilharWhatsapp() {
   const { automaticos, manuais } = _listaAtual;
-  let texto = '🛒 *Lista de Compras — Feira-Certa*\n\n';
+  let texto = '*Lista de Compras — Feira-Certa*\n\n';
   if (automaticos.length) {
     texto += '*Do Estoque:*\n';
     automaticos.forEach(i => { texto += `• ${i.nome} — ${Math.ceil(i.quantidade_sugerida)} ${i.unidade}\n`; });
@@ -218,7 +218,7 @@ function renderizarModoFeira() {
   const el = document.getElementById('itens-modo-feira');
   el.innerHTML = _itensModoFeira.map((item, idx) => `
     <div class="modo-feira-item ${item.marcado ? 'marcado' : ''}" onclick="toggleModoFeira(${idx})">
-      <div class="modo-feira-check"></div>
+      <div class="modo-feira-check">${item.marcado ? '<svg viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="3" width="20" height="20"><polyline points="20 6 9 17 4 12"/></svg>' : ''}</div>
       <div>
         <div class="modo-feira-nome">${item.nome}</div>
         <div class="modo-feira-qtd">${item.qtd}</div>
