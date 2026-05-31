@@ -15,7 +15,7 @@
   --sombra-forte: 0 4px 24px rgba(61,53,48,0.15);
   --radius: 14px;
   --radius-sm: 8px;
-  --nav-h: 64px;
+  --nav-h: 56px;
 }
 
 *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
@@ -27,7 +27,7 @@ body {
   background: var(--fundo);
   color: var(--texto);
   min-height: 100dvh;
-  padding-bottom: calc(var(--nav-h) + 16px);
+  padding-bottom: calc(var(--nav-h) + env(safe-area-inset-bottom) + 24px);
   overflow-x: hidden;
 }
 
@@ -43,12 +43,14 @@ h1, h2, h3, .valor-destaque, .card-valor {
 .nav-bottom {
   position: fixed;
   bottom: 0; left: 0; right: 0;
-  height: var(--nav-h);
-  background: var(--superficie);
-  border-top: 1.5px solid var(--borda);
+  background: var(--fundo);
+  border-top: 1px solid var(--borda);
   display: flex;
+  align-items: flex-start;
   z-index: 100;
-  box-shadow: 0 -2px 12px rgba(61,53,48,0.08);
+  box-shadow: 0 -2px 8px rgba(0,0,0,0.06);
+  padding-top: 8px;
+  padding-bottom: env(safe-area-inset-bottom);
 }
 
 .nav-item {
@@ -58,7 +60,8 @@ h1, h2, h3, .valor-destaque, .card-valor {
   align-items: center;
   justify-content: center;
   gap: 3px;
-  color: var(--texto-sec);
+  min-height: 56px;
+  color: #999;
   font-size: 10px;
   font-weight: 600;
   text-transform: uppercase;
@@ -68,12 +71,23 @@ h1, h2, h3, .valor-destaque, .card-valor {
   border: none;
   background: none;
   padding: 0;
+  position: relative;
   -webkit-tap-highlight-color: transparent;
+  touch-action: manipulation;
 }
 
-.nav-item svg { width: 22px; height: 22px; stroke: currentColor; }
+.nav-item svg { width: 24px; height: 24px; stroke: currentColor; fill: none; }
 .nav-item.ativo { color: var(--caramelo); }
-.nav-item.ativo svg { stroke: var(--caramelo); }
+.nav-item.ativo::before {
+  content: '';
+  position: absolute;
+  top: -8px;
+  left: 25%;
+  right: 25%;
+  height: 2px;
+  background: var(--caramelo);
+  border-radius: 0 0 2px 2px;
+}
 
 /* ===== CARDS ===== */
 .card {
@@ -200,7 +214,7 @@ input::placeholder { color: var(--texto-sec); opacity: 0.6; }
 /* Botão flutuante */
 .fab {
   position: fixed;
-  bottom: calc(var(--nav-h) + 16px);
+  bottom: calc(var(--nav-h) + env(safe-area-inset-bottom) + 16px);
   right: 16px;
   width: 56px;
   height: 56px;
@@ -635,7 +649,7 @@ input::placeholder { color: var(--texto-sec); opacity: 0.6; }
 /* ===== FORM RODAPÉ ===== */
 .form-rodape {
   position: sticky;
-  bottom: calc(var(--nav-h) + 0px);
+  bottom: calc(var(--nav-h) + env(safe-area-inset-bottom));
   background: var(--fundo);
   padding: 12px 0;
   border-top: 1px solid var(--borda);

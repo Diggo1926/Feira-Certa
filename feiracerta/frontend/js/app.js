@@ -80,7 +80,29 @@ async function solicitarNotificacoes() {
 window.addEventListener('DOMContentLoaded', () => {
   carregarDashboard();
   solicitarNotificacoes();
+  _inicializarNavToque();
 });
+
+// ─── Navegação touch-safe ──────────────────────────────────────────────────
+// Diferencia scroll de tap: só navega se o dedo se moveu menos de 8px em Y.
+// Quando dy >= 8 (scroll), chama preventDefault no touchend para suprimir
+// o click sintético que o browser geraria e que dispararia o onclick.
+
+function _inicializarNavToque() {
+  document.querySelectorAll('.nav-item').forEach(btn => {
+    let touchStartY = 0;
+    btn.addEventListener('touchstart', e => {
+      touchStartY = e.touches[0].clientY;
+    }, { passive: true });
+    btn.addEventListener('touchend', e => {
+      const dy = Math.abs(e.changedTouches[0].clientY - touchStartY);
+      if (dy >= 8) {
+        e.preventDefault(); // era scroll — cancela o click sintético
+      }
+      // dy < 8 → tap real → click sintético dispara o onclick normalmente
+    }, { passive: false });
+  });
+}
 
 // ─── Gráfico Canvas ────────────────────────────────────────────────────────
 
