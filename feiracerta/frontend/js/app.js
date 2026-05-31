@@ -1,155 +1,18 @@
 const API = window.ENV_API_URL || '';
 
-// ─── Gerenciamento de tokens ───────────────────────────────────────────────
+// ─── HTTP autenticado ──────────────────────────────────────────────────────
 
-const AUTH = {
-  get accessToken() { return localStorage.getItem('fc_at'); },
-  get refreshToken() { return localStorage.getItem('fc_rt'); },
-  get tokenExpires() { return parseInt(localStorage.getItem('fc_exp') || '0', 10); },
-
-  save(accessToken, refreshToken, expiresIn) {
-    localStorage.setItem('fc_at', accessToken);
-    if (refreshToken) localStorage.setItem('fc_rt', refreshToken);
-    // Guarda expiração com 60s de margem para renovar proativamente
-    localStorage.setItem('fc_exp', String(Date.now() + (expiresIn - 60) * 1000));
-  },
-
-  clear() {
-    localStorage.removeItem('fc_at');
-    localStorage.removeItem('fc_rt');
-    localStorage.removeItem('fc_exp');
-  },
-
-  isExpired() {
-    return !this.accessToken || Date.now() > this.tokenExpires;
-  }
-};
-
-async function renovarToken() {
-  const rt = AUTH.refreshToken;
-  if (!rt) return false;
-  try {
-    const res = await fetch(API + '/api/auth/refresh', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ refresh_token: rt })
-    });
-    if (!res.ok) return false;
-    const data = await res.json();
-    AUTH.save(data.access_token, null, data.expires_in);
-    return true;
-  } catch {
-    return false;
-  }
-}
-
-async function fazerLogin(senha) {
-  const res = await fetch(API + '/api/auth/login', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ senha })
-  });
-  if (!res.ok) {
-    const err = await res.json().catch(() => ({ erro: 'Erro ao autenticar' }));
-    throw new Error(err.erro || 'Erro ao autenticar');
-  }
-  const data = await res.json();
-  AUTH.save(data.access_token, data.refresh_token, data.expires_in);
-}
-
-async function fazerLogout() {
-  const rt = AUTH.refreshToken;
-  if (rt) {
-    fetch(API + '/api/auth/logout', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ refresh_token: rt })
-    }).catch(() => {});
-  }
-  AUTH.clear();
-  mostrarLogin();
-}
-
-async function tentarLogin() {
-  const senhaEl = document.getElementById('login-senha');
-  const erroEl = document.getElementById('login-erro');
-  const btnEl = document.getElementById('btn-login');
-  const senha = senhaEl?.value || '';
-
-  if (!senha) {
-    if (erroEl) { erroEl.textContent = 'Digite a senha.'; erroEl.style.display = 'block'; }
-    return;
-  }
-
-  if (btnEl) { btnEl.disabled = true; btnEl.textContent = 'Entrando...'; }
-  if (erroEl) erroEl.style.display = 'none';
-
-  try {
-    await fazerLogin(senha);
-    if (senhaEl) senhaEl.value = '';
-    mostrarApp();
-    solicitarNotificacoes();
-  } catch (e) {
-    if (erroEl) { erroEl.textContent = e.message || 'Senha incorreta.'; erroEl.style.display = 'block'; }
-    if (senhaEl) { senhaEl.value = ''; senhaEl.focus(); }
-  } finally {
-    if (btnEl) { btnEl.disabled = false; btnEl.textContent = 'Entrar'; }
-  }
-}
-
-function mostrarLogin() {
-  document.querySelectorAll('.pagina').forEach(p => p.classList.remove('ativa'));
-  document.getElementById('pg-login')?.classList.add('ativa');
-  const nav = document.querySelector('nav.nav-bottom');
-  if (nav) nav.style.display = 'none';
-  const fab = document.getElementById('fab-consumo');
-  if (fab) fab.style.display = 'none';
-  setTimeout(() => document.getElementById('login-senha')?.focus(), 100);
-}
-
-function mostrarApp() {
-  const nav = document.querySelector('nav.nav-bottom');
-  if (nav) nav.style.display = '';
-  irPara('pg-inicio');
-}
-
-async function verificarAuth() {
-  if (!AUTH.refreshToken) { mostrarLogin(); return; }
-  if (AUTH.isExpired()) {
-    const ok = await renovarToken();
-    if (!ok) { AUTH.clear(); mostrarLogin(); return; }
-  }
-  mostrarApp();
-}
-
-// ─── HTTP com autenticação ─────────────────────────────────────────────────
-
-async function _fetchComAuth(path, opts = {}) {
-  const { body: bodyData, ...resto } = opts;
-  return fetch(API + path, {
+async function api(path, opts = {}) {
+  const { body: bodyData, headers: extraHeaders, ...resto } = opts;
+  const res = await fetch(API + path, {
     ...resto,
     headers: {
       'Content-Type': 'application/json',
-      'Authorization': `Bearer ${AUTH.accessToken}`,
-      ...(resto.headers || {})
+      'X-App-Token': window.ENV_APP_SECRET_TOKEN || '',
+      ...(extraHeaders || {})
     },
     body: bodyData !== undefined ? JSON.stringify(bodyData) : undefined
   });
-}
-
-async function api(path, opts = {}) {
-  if (AUTH.isExpired()) {
-    const ok = await renovarToken();
-    if (!ok) { mostrarLogin(); throw new Error('Sessão expirada. Faça login novamente.'); }
-  }
-
-  let res = await _fetchComAuth(path, opts);
-
-  if (res.status === 401) {
-    const ok = await renovarToken();
-    if (!ok) { mostrarLogin(); throw new Error('Sessão expirada. Faça login novamente.'); }
-    res = await _fetchComAuth(path, opts);
-  }
 
   if (!res.ok) {
     const err = await res.json().catch(() => ({ erro: 'Erro desconhecido' }));
@@ -215,10 +78,8 @@ async function solicitarNotificacoes() {
 // ─── Inicialização ─────────────────────────────────────────────────────────
 
 window.addEventListener('DOMContentLoaded', () => {
-  document.getElementById('login-senha')?.addEventListener('keydown', e => {
-    if (e.key === 'Enter') tentarLogin();
-  });
-  verificarAuth();
+  carregarDashboard();
+  solicitarNotificacoes();
 });
 
 // ─── Gráfico Canvas ────────────────────────────────────────────────────────

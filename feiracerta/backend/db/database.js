@@ -74,13 +74,6 @@ async function initDB() {
       criado_em TIMESTAMP NOT NULL DEFAULT NOW()
     );
 
-    CREATE TABLE IF NOT EXISTS refresh_tokens (
-      id SERIAL PRIMARY KEY,
-      token_hash TEXT NOT NULL UNIQUE,
-      expires_at TIMESTAMP NOT NULL,
-      criado_em TIMESTAMP NOT NULL DEFAULT NOW()
-    );
-
     INSERT INTO configuracoes (chave, valor) VALUES ('meta_orcamento', '') ON CONFLICT DO NOTHING;
     INSERT INTO configuracoes (chave, valor) VALUES ('vapid_public_key', '') ON CONFLICT DO NOTHING;
   `);
