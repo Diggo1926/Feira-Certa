@@ -61,7 +61,14 @@ const limiterStrict = rateLimit({
 app.use('/api/', limiter);
 app.use('/api/nota/', limiterStrict);
 
-// Routes
+const autenticar = require('./middleware/autenticacao');
+
+// Auth routes — sem proteção (login e refresh são públicos por natureza)
+app.use('/api/auth', require('./routes/auth'));
+
+// Todas as demais rotas /api exigem token válido
+app.use('/api', autenticar);
+
 app.use('/api/produtos', require('./routes/produtos'));
 app.use('/api/feiras', require('./routes/feiras'));
 app.use('/api/lista', require('./routes/lista'));
