@@ -74,8 +74,29 @@ async function initDB() {
       criado_em TIMESTAMP NOT NULL DEFAULT NOW()
     );
 
+    CREATE TABLE IF NOT EXISTS categorias (
+      id SERIAL PRIMARY KEY,
+      nome VARCHAR(100) NOT NULL UNIQUE,
+      criada_em TIMESTAMP NOT NULL DEFAULT NOW()
+    );
+
     INSERT INTO configuracoes (chave, valor) VALUES ('meta_orcamento', '') ON CONFLICT DO NOTHING;
     INSERT INTO configuracoes (chave, valor) VALUES ('vapid_public_key', '') ON CONFLICT DO NOTHING;
+
+    INSERT INTO categorias (nome) VALUES
+      ('Grãos e Cereais'),
+      ('Laticínios'),
+      ('Carnes e Peixes'),
+      ('Hortifrúti'),
+      ('Bebidas'),
+      ('Limpeza'),
+      ('Higiene'),
+      ('Temperos e Condimentos'),
+      ('Massas e Pães'),
+      ('Enlatados e Conservas'),
+      ('Frios e Embutidos'),
+      ('Congelados')
+    ON CONFLICT (nome) DO NOTHING;
   `);
 }
 

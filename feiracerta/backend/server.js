@@ -64,6 +64,7 @@ app.use('/api/nota/', limiterStrict);
 // Todas as rotas /api exigem X-App-Token válido
 app.use('/api', require('./middleware/appToken'));
 
+app.use('/api/categorias', require('./routes/categorias'));
 app.use('/api/produtos', require('./routes/produtos'));
 app.use('/api/feiras', require('./routes/feiras'));
 app.use('/api/lista', require('./routes/lista'));
