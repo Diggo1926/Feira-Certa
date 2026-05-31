@@ -90,6 +90,114 @@ async function carregarConfiguracoes() {
     document.getElementById('meta-orcamento').value = config.meta_orcamento || '';
     window._config = config;
   } catch (e) {}
+  carregarSecaoCategorias();
+}
+
+// ─── Gerenciamento de categorias ──────────────────────────────────────────
+
+async function carregarSecaoCategorias() {
+  const el = document.getElementById('lista-categorias-config');
+  if (!el) return;
+  try {
+    const cats = await api('/api/categorias');
+    if (!cats.length) {
+      el.innerHTML = '<p style="font-size:13px;color:var(--texto-sec)">Nenhuma categoria cadastrada.</p>';
+      return;
+    }
+    el.innerHTML = cats.map(c => _renderCategoriaConfig(c)).join('');
+  } catch (e) {
+    el.innerHTML = '<p style="font-size:13px;color:var(--erro)">Erro ao carregar categorias.</p>';
+  }
+}
+
+function _renderCategoriaConfig(c) {
+  const nomeEsc = c.nome.replace(/'/g, "\\'").replace(/"/g, '&quot;');
+  return `
+    <div id="cat-cfg-${c.id}" style="display:flex;align-items:center;gap:6px;padding:9px 0;border-bottom:1px solid var(--borda)">
+      <span style="flex:1;font-size:14px;color:var(--texto)">${c.nome}</span>
+      <button class="btn btn-secundario btn-sm btn-icon" title="Editar" onclick="iniciarEditCategoriaConfig(${c.id},'${nomeEsc}')">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="14" height="14"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
+      </button>
+      <button class="btn btn-secundario btn-sm btn-icon" title="Excluir" onclick="excluirCategoriaConfig(${c.id},'${nomeEsc}')">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="14" height="14"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6m3 0V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"/></svg>
+      </button>
+    </div>`;
+}
+
+function iniciarEditCategoriaConfig(id, nomeAtual) {
+  const item = document.getElementById(`cat-cfg-${id}`);
+  if (!item) return;
+  item.innerHTML = `
+    <div style="display:flex;gap:6px;width:100%;align-items:center">
+      <input id="edit-cat-cfg-${id}" type="text" value="${nomeAtual}" maxlength="100" style="flex:1"
+        onkeydown="if(event.key==='Enter') salvarEditCategoriaConfig(${id}); if(event.key==='Escape') carregarSecaoCategorias();">
+      <button class="btn btn-primario btn-sm" onclick="salvarEditCategoriaConfig(${id})">Salvar</button>
+      <button class="btn btn-secundario btn-sm" onclick="carregarSecaoCategorias()">Cancelar</button>
+    </div>`;
+  document.getElementById(`edit-cat-cfg-${id}`)?.focus();
+}
+
+async function salvarEditCategoriaConfig(id) {
+  const input = document.getElementById(`edit-cat-cfg-${id}`);
+  const nome = input?.value?.trim();
+  if (!nome) { toast('Nome não pode ser vazio', 'erro'); return; }
+  try {
+    await api(`/api/categorias/${id}`, { method: 'PUT', body: { nome } });
+    toast('Categoria renomeada!', 'sucesso');
+  } catch (e) {
+    toast(e.message.includes('já existe') ? 'Já existe uma categoria com esse nome' : (e.message || 'Erro ao renomear'), 'erro');
+  }
+  carregarSecaoCategorias();
+}
+
+async function excluirCategoriaConfig(id, nome) {
+  if (!confirm(`Excluir a categoria "${nome}"?`)) return;
+  try {
+    await api(`/api/categorias/${id}`, { method: 'DELETE' });
+    toast('Categoria excluída!', 'sucesso');
+  } catch (e) {
+    if (e.message.includes('em uso')) {
+      toast('Categoria em uso — remova os produtos antes de excluir', 'erro');
+    } else {
+      toast(e.message || 'Erro ao excluir', 'erro');
+    }
+  }
+  carregarSecaoCategorias();
+}
+
+function iniciarAddCategoriaConfig() {
+  const form = document.getElementById('add-categoria-config-form');
+  if (!form) return;
+  form.style.display = 'block';
+  const inp = document.getElementById('nova-cat-config-input');
+  inp.value = '';
+  document.getElementById('nova-cat-config-erro').style.display = 'none';
+  inp.focus();
+}
+
+function cancelarAddCategoriaConfig() {
+  document.getElementById('add-categoria-config-form').style.display = 'none';
+}
+
+async function confirmarAddCategoriaConfig() {
+  const nome = document.getElementById('nova-cat-config-input')?.value?.trim();
+  const erroEl = document.getElementById('nova-cat-config-erro');
+  if (!nome) {
+    erroEl.textContent = 'Nome não pode ser vazio';
+    erroEl.style.display = 'block';
+    return;
+  }
+  erroEl.style.display = 'none';
+  try {
+    await api('/api/categorias', { method: 'POST', body: { nome } });
+    toast('Categoria criada!', 'sucesso');
+    cancelarAddCategoriaConfig();
+  } catch (e) {
+    erroEl.textContent = e.message.includes('já existe') ? 'Categoria já existe' : (e.message || 'Erro ao criar');
+    erroEl.style.display = 'block';
+    return;
+  }
+  carregarSecaoCategorias();
 }
 
 async function ativarNotificacoes() {

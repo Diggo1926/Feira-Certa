@@ -1,4 +1,63 @@
 let _produtoEditando = null;
+let _categoriasDropdown = [];
+
+// ─── Categorias dinâmicas ──────────────────────────────────────────────────
+
+async function carregarCategoriasCadastro(forceReload = false) {
+  if (_categoriasDropdown.length && !forceReload) return;
+  try {
+    _categoriasDropdown = await api('/api/categorias');
+  } catch (e) {
+    // mantém o que estava carregado
+  }
+  const select = document.getElementById('c-categoria');
+  if (select) _preencherSelectCategorias(select, select.value);
+}
+
+function _preencherSelectCategorias(select, valorSelecionado) {
+  const prev = valorSelecionado || select.value;
+  select.innerHTML =
+    '<option value="">Selecionar...</option>' +
+    _categoriasDropdown.map(c => `<option value="${c.nome}">${c.nome}</option>`).join('') +
+    '<option value="__nova__">+ Nova categoria...</option>';
+  // Tenta restaurar seleção anterior
+  if (prev && prev !== '__nova__') {
+    select.value = prev;
+    // Se não encontrou (categoria pode ter sido renomeada), limpa
+    if (select.value !== prev) select.value = '';
+  }
+}
+
+async function criarCategoriaRapida() {
+  const input = document.getElementById('c-categoria-nova');
+  const erroEl = document.getElementById('c-categoria-nova-erro');
+  const nome = input?.value?.trim();
+
+  if (!nome) {
+    erroEl.textContent = 'Digite o nome da categoria';
+    erroEl.style.display = 'block';
+    return;
+  }
+  erroEl.style.display = 'none';
+
+  try {
+    const nova = await api('/api/categorias', { method: 'POST', body: { nome } });
+    _categoriasDropdown.push(nova);
+    _categoriasDropdown.sort((a, b) => a.nome.localeCompare(b.nome, 'pt-BR'));
+    const select = document.getElementById('c-categoria');
+    _preencherSelectCategorias(select, nova.nome);
+    document.getElementById('c-categoria-nova-wrap').style.display = 'none';
+    toast('Categoria criada!', 'sucesso');
+  } catch (e) {
+    erroEl.textContent = e.message.includes('já existe')
+      ? 'Categoria já existe — selecione-a no menu'
+      : (e.message || 'Erro ao criar categoria');
+    erroEl.style.display = 'block';
+    if (e.message.includes('já existe')) await carregarCategoriasCadastro(true);
+  }
+}
+
+// ─── Formulário ───────────────────────────────────────────────────────────
 
 function novoCadastro() {
   _produtoEditando = null;
@@ -8,7 +67,7 @@ function novoCadastro() {
   ['c-qtd-atual','c-qtd-min','c-preco'].forEach(id => { const el = document.getElementById(id); if (el) el.value = ''; });
   document.getElementById('c-categoria').value = '';
   document.getElementById('c-unidade').value = 'Unidade';
-  document.getElementById('c-categoria-nova').style.display = 'none';
+  document.getElementById('c-categoria-nova-wrap').style.display = 'none';
   document.getElementById('historico-precos-cadastro').style.display = 'none';
 }
 
@@ -25,8 +84,10 @@ function preencherFormularioCadastro(p) {
   document.getElementById('c-unidade').value = p.unidade || 'Unidade';
 
   const catSelect = document.getElementById('c-categoria');
-  let optExists = [...catSelect.options].some(o => o.value === p.categoria);
-  if (!optExists && p.categoria) {
+  // Garante que a categoria do produto está disponível no dropdown
+  const existe = _categoriasDropdown.some(c => c.nome === p.categoria);
+  if (!existe && p.categoria) {
+    // Adiciona temporariamente para não perder o valor ao editar
     const opt = new Option(p.categoria, p.categoria);
     catSelect.insertBefore(opt, catSelect.lastElementChild);
   }
@@ -43,21 +104,57 @@ function preencherFormularioCadastro(p) {
 }
 
 document.getElementById('c-categoria')?.addEventListener('change', function () {
-  const nova = document.getElementById('c-categoria-nova');
-  nova.style.display = this.value === '__nova__' ? 'block' : 'none';
-  if (this.value === '__nova__') nova.focus();
+  const wrap = document.getElementById('c-categoria-nova-wrap');
+  if (!wrap) return;
+  const abrir = this.value === '__nova__';
+  wrap.style.display = abrir ? 'block' : 'none';
+  if (abrir) {
+    document.getElementById('c-categoria-nova').value = '';
+    document.getElementById('c-categoria-nova-erro').style.display = 'none';
+    document.getElementById('c-categoria-nova').focus();
+  }
+});
+
+document.getElementById('c-categoria-nova')?.addEventListener('keydown', e => {
+  if (e.key === 'Enter') { e.preventDefault(); criarCategoriaRapida(); }
+  if (e.key === 'Escape') {
+    document.getElementById('c-categoria-nova-wrap').style.display = 'none';
+    document.getElementById('c-categoria').value = '';
+  }
 });
 
 async function salvarProduto() {
   const id = document.getElementById('cadastro-id').value;
   const catSelect = document.getElementById('c-categoria');
-  let categoria = catSelect.value === '__nova__'
-    ? document.getElementById('c-categoria-nova').value.trim()
-    : catSelect.value;
+  let categoria = catSelect.value;
+
+  // Se ainda está em __nova__, tenta criar a categoria antes de salvar
+  if (categoria === '__nova__') {
+    const nomeNovo = document.getElementById('c-categoria-nova')?.value?.trim();
+    if (!nomeNovo) {
+      toast('Digite e clique em "Criar" para confirmar a nova categoria', 'erro');
+      return;
+    }
+    try {
+      const nova = await api('/api/categorias', { method: 'POST', body: { nome: nomeNovo } });
+      _categoriasDropdown.push(nova);
+      _categoriasDropdown.sort((a, b) => a.nome.localeCompare(b.nome, 'pt-BR'));
+      _preencherSelectCategorias(catSelect, nova.nome);
+      document.getElementById('c-categoria-nova-wrap').style.display = 'none';
+      categoria = nova.nome;
+    } catch (e) {
+      const msg = e.message.includes('já existe')
+        ? 'Essa categoria já existe — selecione-a no dropdown'
+        : (e.message || 'Erro ao criar categoria');
+      toast(msg, 'erro');
+      if (e.message.includes('já existe')) await carregarCategoriasCadastro(true);
+      return;
+    }
+  }
 
   const dados = {
     nome: document.getElementById('c-nome').value.trim(),
-    categoria: categoria,
+    categoria,
     unidade: document.getElementById('c-unidade').value,
     quantidade_atual: parseFloat(document.getElementById('c-qtd-atual').value) || 0,
     quantidade_minima: parseFloat(document.getElementById('c-qtd-min').value) || 1,
@@ -88,7 +185,6 @@ async function salvarProduto() {
     }
   }
 }
-
 
 async function verificarCodigoExistente(codigo) {
   try {

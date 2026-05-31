@@ -67,10 +67,11 @@ async function alterarQtd(id, delta) {
   }
 }
 
-function abrirEdicao(id) {
+async function abrirEdicao(id) {
   const p = _produtos.find(x => x.id === id);
   if (!p) return;
   irPara('pg-cadastro');
+  await carregarCategoriasCadastro();
   preencherFormularioCadastro(p);
 }
 

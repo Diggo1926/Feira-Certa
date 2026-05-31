@@ -43,6 +43,7 @@ function irPara(pagId) {
 
   if (pagId === 'pg-inicio') carregarDashboard();
   if (pagId === 'pg-estoque') carregarEstoque();
+  if (pagId === 'pg-cadastro') carregarCategoriasCadastro();
   if (pagId === 'pg-lista') carregarLista();
   if (pagId === 'pg-historico') carregarHistorico();
   if (pagId === 'pg-config') carregarConfiguracoes();

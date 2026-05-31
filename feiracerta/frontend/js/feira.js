@@ -174,16 +174,17 @@ async function confirmarFeira() {
 async function _carregarCategorias() {
   if (_categoriasCache) return;
   try {
-    _categoriasCache = await api('/api/produtos/categorias');
+    const lista = await api('/api/categorias');
+    _categoriasCache = lista.map(c => c.nome);
   } catch (_) {
-    _categoriasCache = ['Alimentos', 'Bebidas', 'Higiene', 'Limpeza', 'Outros'];
+    _categoriasCache = [];
   }
 }
 
 function _mostrarModalNovoProduto(produto) {
   const modal = document.getElementById('modal-novo-produto');
   document.getElementById('modal-np-nome').textContent = produto.nome;
-  const cats = _categoriasCache || ['Alimentos', 'Bebidas', 'Higiene', 'Limpeza', 'Outros'];
+  const cats = _categoriasCache || [];
   document.getElementById('modal-np-categoria').innerHTML =
     cats.map(c => `<option value="${_escapar(c)}">${c}</option>`).join('');
   document.getElementById('modal-np-qtd-min').value = '1';

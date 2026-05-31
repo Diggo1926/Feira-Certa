@@ -77,21 +77,15 @@
       <label for="c-categoria">Categoria *</label>
       <select id="c-categoria">
         <option value="">Selecionar...</option>
-        <option>Grãos e Cereais</option>
-        <option>Laticínios</option>
-        <option>Carnes e Peixes</option>
-        <option>Hortifrúti</option>
-        <option>Bebidas</option>
-        <option>Limpeza</option>
-        <option>Higiene</option>
-        <option>Temperos e Condimentos</option>
-        <option>Massas e Pães</option>
-        <option>Enlatados e Conservas</option>
-        <option>Frios e Embutidos</option>
-        <option>Congelados</option>
         <option value="__nova__">+ Nova categoria...</option>
       </select>
-      <input type="text" id="c-categoria-nova" placeholder="Nome da nova categoria" style="margin-top:8px;display:none" maxlength="100">
+      <div id="c-categoria-nova-wrap" style="margin-top:8px;display:none">
+        <div style="display:flex;gap:6px;align-items:center">
+          <input type="text" id="c-categoria-nova" placeholder="Nome da nova categoria" maxlength="100" style="flex:1">
+          <button type="button" class="btn btn-secundario btn-sm" onclick="criarCategoriaRapida()">Criar</button>
+        </div>
+        <p id="c-categoria-nova-erro" style="color:var(--erro);font-size:12px;margin-top:4px;display:none"></p>
+      </div>
     </div>
 
     <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
@@ -283,6 +277,26 @@
     <button class="btn btn-secundario" style="width:100%" onclick="testarNotificacao()">
       Testar Notificação
     </button>
+  </div>
+
+  <div class="bloco-separador">
+    <div class="bloco-titulo">Categorias</div>
+    <div id="add-categoria-config-wrap" style="margin-bottom:10px">
+      <button class="btn btn-secundario btn-sm" style="width:100%" onclick="iniciarAddCategoriaConfig()">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+        Adicionar categoria
+      </button>
+      <div id="add-categoria-config-form" style="display:none;margin-top:8px">
+        <div style="display:flex;gap:6px;align-items:center">
+          <input type="text" id="nova-cat-config-input" placeholder="Nome da categoria" maxlength="100" style="flex:1"
+            onkeydown="if(event.key==='Enter') confirmarAddCategoriaConfig(); if(event.key==='Escape') cancelarAddCategoriaConfig();">
+          <button class="btn btn-primario btn-sm" onclick="confirmarAddCategoriaConfig()">Criar</button>
+          <button class="btn btn-secundario btn-sm" onclick="cancelarAddCategoriaConfig()">✕</button>
+        </div>
+        <p id="nova-cat-config-erro" style="color:var(--erro);font-size:12px;margin-top:4px;display:none"></p>
+      </div>
+    </div>
+    <div id="lista-categorias-config"></div>
   </div>
 
   <div class="bloco-separador">
