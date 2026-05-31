@@ -6,75 +6,82 @@ const db = require('../db/database');
 const axios = require('axios');
 
 const MIMES_PERMITIDOS = ['image/jpeg', 'image/png', 'image/webp'];
+const GEMINI_MODEL = process.env.GEMINI_MODEL || 'gemini-2.5-flash-lite';
+
+async function _chamarGemini(apiKey, imagem, mimeType) {
+  const prompt = `Você está analisando um cupom fiscal brasileiro. Extraia todos os produtos listados e retorne APENAS um JSON válido, sem texto adicional, sem markdown, sem backticks, no seguinte formato: {"produtos":[{"nome":"nome do produto","quantidade":1.0,"preco_unitario":0.00,"preco_total":0.00}],"valor_total":0.00,"data":"DD/MM/AAAA"}. Normalize os nomes dos produtos removendo códigos e abreviações excessivas.`;
+
+  const { data } = await axios.post(
+    `https://generativelanguage.googleapis.com/v1beta/models/${GEMINI_MODEL}:generateContent?key=${apiKey}`,
+    {
+      contents: [{
+        parts: [
+          { inline_data: { mime_type: mimeType, data: imagem } },
+          { text: prompt }
+        ]
+      }]
+    },
+    { timeout: 30000 }
+  );
+  return data;
+}
+
+async function _comRetry(fn, maxTentativas = 3) {
+  let ultimoErro;
+  for (let tentativa = 1; tentativa <= maxTentativas; tentativa++) {
+    try {
+      return await fn();
+    } catch (e) {
+      ultimoErro = e;
+      const status = e.response?.status;
+      const transitorio = e.code === 'ECONNABORTED' || status === 429 || (status >= 500 && status < 600);
+      if (!transitorio || tentativa === maxTentativas) throw e;
+      await new Promise(r => setTimeout(r, Math.pow(2, tentativa - 1) * 1000));
+    }
+  }
+  throw ultimoErro;
+}
 
 router.post('/foto', [
   body('imagem').isString().notEmpty().withMessage('Imagem obrigatória'),
   body('mimeType').isIn(MIMES_PERMITIDOS).withMessage('Formato de imagem inválido (use JPEG, PNG ou WebP)'),
   validar
 ], async (req, res) => {
-  console.log('[GEMINI] Recebida requisição de foto');
-  console.log('[GEMINI] MimeType:', req.body.mimeType);
-  console.log('[GEMINI] Tamanho da imagem base64:', req.body.imagem?.length);
+  const apiKey = process.env.GEMINI_API_KEY;
+  if (!apiKey) {
+    console.error('[GEMINI] GEMINI_API_KEY não configurada no ambiente');
+    return res.status(503).json({ erro: 'Serviço de leitura de cupom indisponível no momento' });
+  }
 
   const { imagem, mimeType } = req.body;
 
-  const apiKey = process.env.GEMINI_API_KEY;
-  console.log('[GEMINI] API Key presente:', !!apiKey);
-  if (!apiKey) return res.status(500).json({ erro: 'Gemini API não configurada no servidor' });
-
-  const prompt = `Você está analisando um cupom fiscal brasileiro. Extraia todos os produtos listados e retorne APENAS um JSON válido, sem texto adicional, sem markdown, sem backticks, no seguinte formato: {"produtos":[{"nome":"nome do produto","quantidade":1.0,"preco_unitario":0.00,"preco_total":0.00}],"valor_total":0.00,"data":"DD/MM/AAAA"}. Normalize os nomes dos produtos removendo códigos e abreviações excessivas.`;
-
   try {
-    console.log('[GEMINI] Enviando requisição para a API...');
-    const { data: geminiData } = await axios.post(
-      `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${apiKey}`,
-      {
-        contents: [{
-          parts: [
-            {
-              inline_data: {
-                mime_type: mimeType,
-                data: imagem
-              }
-            },
-            {
-              text: prompt
-            }
-          ]
-        }]
-      },
-      { timeout: 30000 }
-    );
+    const geminiData = await _comRetry(() => _chamarGemini(apiKey, imagem, mimeType));
 
-    console.log('[GEMINI] Resposta recebida, processando...');
     const text = geminiData?.candidates?.[0]?.content?.parts?.[0]?.text || '';
-    console.log('[GEMINI] Texto retornado (primeiros 200 chars):', text.slice(0, 200));
     const limpo = text.replace(/```json\s*/g, '').replace(/```\s*/g, '').trim();
     const match = limpo.match(/\{[\s\S]*\}/);
     if (!match) {
-      console.log('[GEMINI] Não encontrou JSON válido na resposta');
       return res.status(422).json({ erro: 'Não foi possível extrair os dados do cupom. Tente uma foto mais nítida e bem iluminada.' });
     }
 
     let dados;
     try {
       dados = JSON.parse(match[0]);
-    } catch (parseErr) {
-      console.log('[GEMINI] Erro ao fazer parse do JSON:', parseErr.message);
-      console.log('[GEMINI] Conteúdo que falhou no parse:', match[0].slice(0, 200));
+    } catch {
       return res.status(422).json({ erro: 'Não foi possível extrair os dados do cupom. Tente uma foto mais nítida e bem iluminada.' });
     }
-    console.log('[GEMINI] Dados extraídos com sucesso, produtos:', dados.produtos?.length);
+
     return res.json(dados);
   } catch (e) {
-    console.error('[GEMINI] Erro:', e.message);
-    console.error('[GEMINI] Status HTTP:', e.response?.status);
-    console.error('[GEMINI] Resposta de erro:', JSON.stringify(e.response?.data)?.slice(0, 500));
-    if (e.response?.status === 400) return res.status(422).json({ erro: 'Imagem inválida ou ilegível pelo Gemini' });
-    if (e.response?.status === 429) return res.status(429).json({ erro: 'Limite de requisições da IA atingido. Aguarde e tente novamente.' });
+    const status = e.response?.status;
+    console.error(`[GEMINI] Erro ${status || e.code || 'desconhecido'}: ${e.message}`);
+
+    if (status === 400) return res.status(422).json({ erro: 'Imagem inválida ou ilegível pelo serviço de IA' });
+    if (status === 404) return res.status(503).json({ erro: 'Serviço de leitura de cupom indisponível no momento' });
+    if (status === 429) return res.status(429).json({ erro: 'Limite de requisições da IA atingido. Aguarde e tente novamente.' });
     if (e.code === 'ECONNABORTED') return res.status(422).json({ erro: 'Tempo limite ao processar imagem. Tente novamente.' });
-    // DEBUG TEMPORÁRIO - remover após diagnóstico
-    return res.status(500).json({ erro: 'Erro ao processar imagem com IA', _debug: { msg: e.message, status: e.response?.status, data: JSON.stringify(e.response?.data)?.slice(0, 300) } });
+    return res.status(503).json({ erro: 'Serviço de leitura de cupom indisponível no momento' });
   }
 });
 
