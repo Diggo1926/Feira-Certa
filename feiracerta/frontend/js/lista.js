@@ -187,7 +187,18 @@ async function compartilharWhatsapp() {
 }
 
 async function exportarPDF() {
-  window.open((window.ENV_API_URL || '') + '/api/lista/pdf', '_blank');
+  try {
+    const res = await fetch((window.ENV_API_URL || '') + '/api/lista/pdf', {
+      headers: { 'Authorization': `Bearer ${AUTH.accessToken}` }
+    });
+    if (!res.ok) throw new Error();
+    const blob = await res.blob();
+    const url = URL.createObjectURL(blob);
+    window.open(url, '_blank');
+    setTimeout(() => URL.revokeObjectURL(url), 15000);
+  } catch (e) {
+    toast('Erro ao gerar PDF', 'erro');
+  }
 }
 
 // Modo Feira

@@ -1,19 +1,164 @@
-// Utilitários globais e roteamento
-
 const API = window.ENV_API_URL || '';
 
-async function api(path, opts = {}) {
-  const res = await fetch(API + path, {
+// ─── Gerenciamento de tokens ───────────────────────────────────────────────
+
+const AUTH = {
+  get accessToken() { return localStorage.getItem('fc_at'); },
+  get refreshToken() { return localStorage.getItem('fc_rt'); },
+  get tokenExpires() { return parseInt(localStorage.getItem('fc_exp') || '0', 10); },
+
+  save(accessToken, refreshToken, expiresIn) {
+    localStorage.setItem('fc_at', accessToken);
+    if (refreshToken) localStorage.setItem('fc_rt', refreshToken);
+    // Guarda expiração com 60s de margem para renovar proativamente
+    localStorage.setItem('fc_exp', String(Date.now() + (expiresIn - 60) * 1000));
+  },
+
+  clear() {
+    localStorage.removeItem('fc_at');
+    localStorage.removeItem('fc_rt');
+    localStorage.removeItem('fc_exp');
+  },
+
+  isExpired() {
+    return !this.accessToken || Date.now() > this.tokenExpires;
+  }
+};
+
+async function renovarToken() {
+  const rt = AUTH.refreshToken;
+  if (!rt) return false;
+  try {
+    const res = await fetch(API + '/api/auth/refresh', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ refresh_token: rt })
+    });
+    if (!res.ok) return false;
+    const data = await res.json();
+    AUTH.save(data.access_token, null, data.expires_in);
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+async function fazerLogin(senha) {
+  const res = await fetch(API + '/api/auth/login', {
+    method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    ...opts,
-    body: opts.body ? JSON.stringify(opts.body) : undefined
+    body: JSON.stringify({ senha })
   });
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({ erro: 'Erro ao autenticar' }));
+    throw new Error(err.erro || 'Erro ao autenticar');
+  }
+  const data = await res.json();
+  AUTH.save(data.access_token, data.refresh_token, data.expires_in);
+}
+
+async function fazerLogout() {
+  const rt = AUTH.refreshToken;
+  if (rt) {
+    fetch(API + '/api/auth/logout', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ refresh_token: rt })
+    }).catch(() => {});
+  }
+  AUTH.clear();
+  mostrarLogin();
+}
+
+async function tentarLogin() {
+  const senhaEl = document.getElementById('login-senha');
+  const erroEl = document.getElementById('login-erro');
+  const btnEl = document.getElementById('btn-login');
+  const senha = senhaEl?.value || '';
+
+  if (!senha) {
+    if (erroEl) { erroEl.textContent = 'Digite a senha.'; erroEl.style.display = 'block'; }
+    return;
+  }
+
+  if (btnEl) { btnEl.disabled = true; btnEl.textContent = 'Entrando...'; }
+  if (erroEl) erroEl.style.display = 'none';
+
+  try {
+    await fazerLogin(senha);
+    if (senhaEl) senhaEl.value = '';
+    mostrarApp();
+    solicitarNotificacoes();
+  } catch (e) {
+    if (erroEl) { erroEl.textContent = e.message || 'Senha incorreta.'; erroEl.style.display = 'block'; }
+    if (senhaEl) { senhaEl.value = ''; senhaEl.focus(); }
+  } finally {
+    if (btnEl) { btnEl.disabled = false; btnEl.textContent = 'Entrar'; }
+  }
+}
+
+function mostrarLogin() {
+  document.querySelectorAll('.pagina').forEach(p => p.classList.remove('ativa'));
+  document.getElementById('pg-login')?.classList.add('ativa');
+  const nav = document.querySelector('nav.nav-bottom');
+  if (nav) nav.style.display = 'none';
+  const fab = document.getElementById('fab-consumo');
+  if (fab) fab.style.display = 'none';
+  setTimeout(() => document.getElementById('login-senha')?.focus(), 100);
+}
+
+function mostrarApp() {
+  const nav = document.querySelector('nav.nav-bottom');
+  if (nav) nav.style.display = '';
+  irPara('pg-inicio');
+}
+
+async function verificarAuth() {
+  if (!AUTH.refreshToken) { mostrarLogin(); return; }
+  if (AUTH.isExpired()) {
+    const ok = await renovarToken();
+    if (!ok) { AUTH.clear(); mostrarLogin(); return; }
+  }
+  mostrarApp();
+}
+
+// ─── HTTP com autenticação ─────────────────────────────────────────────────
+
+async function _fetchComAuth(path, opts = {}) {
+  const { body: bodyData, ...resto } = opts;
+  return fetch(API + path, {
+    ...resto,
+    headers: {
+      'Content-Type': 'application/json',
+      'Authorization': `Bearer ${AUTH.accessToken}`,
+      ...(resto.headers || {})
+    },
+    body: bodyData !== undefined ? JSON.stringify(bodyData) : undefined
+  });
+}
+
+async function api(path, opts = {}) {
+  if (AUTH.isExpired()) {
+    const ok = await renovarToken();
+    if (!ok) { mostrarLogin(); throw new Error('Sessão expirada. Faça login novamente.'); }
+  }
+
+  let res = await _fetchComAuth(path, opts);
+
+  if (res.status === 401) {
+    const ok = await renovarToken();
+    if (!ok) { mostrarLogin(); throw new Error('Sessão expirada. Faça login novamente.'); }
+    res = await _fetchComAuth(path, opts);
+  }
+
   if (!res.ok) {
     const err = await res.json().catch(() => ({ erro: 'Erro desconhecido' }));
     throw new Error(err.erro || 'Erro na requisição');
   }
   return res.json();
 }
+
+// ─── Utilitários de UI ─────────────────────────────────────────────────────
 
 function toast(msg, tipo = '') {
   const el = document.getElementById('toast');
@@ -30,10 +175,9 @@ function irPara(pagId) {
     n.classList.toggle('ativo', n.dataset.pg === pagId);
   });
 
-  // Mostrar/esconder FAB só no início
-  document.getElementById('fab-consumo').style.display = pagId === 'pg-inicio' ? 'flex' : 'none';
+  const fab = document.getElementById('fab-consumo');
+  if (fab) fab.style.display = pagId === 'pg-inicio' ? 'flex' : 'none';
 
-  // Recarregar dados ao entrar na página
   if (pagId === 'pg-inicio') carregarDashboard();
   if (pagId === 'pg-estoque') carregarEstoque();
   if (pagId === 'pg-lista') carregarLista();
@@ -55,16 +199,11 @@ function loading(html = '<div class="loading"><div class="spinner"></div> Carreg
   return html;
 }
 
-// Registrar Service Worker e PWA
+// ─── PWA e notificações ────────────────────────────────────────────────────
+
 if ('serviceWorker' in navigator) {
   navigator.serviceWorker.register('/service-worker.js').catch(() => {});
 }
-
-// Inicializar app
-window.addEventListener('DOMContentLoaded', () => {
-  carregarDashboard();
-  solicitarNotificacoes();
-});
 
 async function solicitarNotificacoes() {
   if (!('Notification' in window)) return;
@@ -73,7 +212,17 @@ async function solicitarNotificacoes() {
   }
 }
 
-// Desenhar gráfico de linha com Canvas puro
+// ─── Inicialização ─────────────────────────────────────────────────────────
+
+window.addEventListener('DOMContentLoaded', () => {
+  document.getElementById('login-senha')?.addEventListener('keydown', e => {
+    if (e.key === 'Enter') tentarLogin();
+  });
+  verificarAuth();
+});
+
+// ─── Gráfico Canvas ────────────────────────────────────────────────────────
+
 function desenharGrafico(canvasId, labels, valores, cor = '#C9956E') {
   const canvas = document.getElementById(canvasId);
   if (!canvas) return;
@@ -101,7 +250,6 @@ function desenharGrafico(canvasId, labels, valores, cor = '#C9956E') {
   const px = (i) => pad.left + (i / (valores.length - 1)) * gW;
   const py = (v) => pad.top + gH - ((v - min) / range) * gH;
 
-  // Área
   ctx.beginPath();
   ctx.moveTo(px(0), py(valores[0]));
   valores.forEach((v, i) => { if (i > 0) ctx.lineTo(px(i), py(v)); });
@@ -114,7 +262,6 @@ function desenharGrafico(canvasId, labels, valores, cor = '#C9956E') {
   ctx.fillStyle = grad;
   ctx.fill();
 
-  // Linha
   ctx.beginPath();
   ctx.strokeStyle = cor;
   ctx.lineWidth = 2.5;
@@ -123,7 +270,6 @@ function desenharGrafico(canvasId, labels, valores, cor = '#C9956E') {
   valores.forEach((v, i) => { if (i > 0) ctx.lineTo(px(i), py(v)); });
   ctx.stroke();
 
-  // Pontos
   valores.forEach((v, i) => {
     ctx.beginPath();
     ctx.arc(px(i), py(v), 4, 0, Math.PI * 2);
@@ -134,18 +280,14 @@ function desenharGrafico(canvasId, labels, valores, cor = '#C9956E') {
     ctx.stroke();
   });
 
-  // Labels eixo X
   ctx.fillStyle = '#7A6A5A';
   ctx.font = '10px Nunito';
   ctx.textAlign = 'center';
   const passo = Math.max(1, Math.floor(labels.length / 5));
   labels.forEach((l, i) => {
-    if (i % passo === 0 || i === labels.length - 1) {
-      ctx.fillText(l, px(i), H - 6);
-    }
+    if (i % passo === 0 || i === labels.length - 1) ctx.fillText(l, px(i), H - 6);
   });
 
-  // Labels eixo Y
   ctx.textAlign = 'right';
   [min, (min + max) / 2, max].forEach(v => {
     const y = py(v);
