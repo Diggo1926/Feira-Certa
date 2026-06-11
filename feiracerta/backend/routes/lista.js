@@ -68,6 +68,56 @@ router.delete('/manual/:id', [param('id').isInt({ min: 1 }), validar], async (re
   }
 });
 
+// POST /excluir-lote — exclui itens manuais e/ou produtos do estoque em uma transação
+router.post('/excluir-lote', [
+  body('manuais').optional().isArray({ max: 200 }),
+  body('manuais.*').optional({ nullable: true }).isInt({ min: 1 }),
+  body('produtos').optional().isArray({ max: 200 }),
+  body('produtos.*').optional({ nullable: true }).isInt({ min: 1 }),
+  validar
+], async (req, res) => {
+  const manuais = Array.isArray(req.body.manuais) ? req.body.manuais : [];
+  const produtos = Array.isArray(req.body.produtos) ? req.body.produtos : [];
+
+  if (manuais.length + produtos.length === 0) {
+    return res.status(400).json({ erro: 'Informe ao menos um item para excluir' });
+  }
+  if (manuais.length + produtos.length > 200) {
+    return res.status(400).json({ erro: 'Máximo de 200 itens por operação' });
+  }
+
+  const client = await db.connect();
+  try {
+    await client.query('BEGIN');
+    let manuaisExcluidos = 0;
+    let produtosExcluidos = 0;
+
+    if (manuais.length > 0) {
+      const { rowCount } = await client.query(
+        'DELETE FROM itens_lista_manual WHERE id = ANY($1::int[])',
+        [manuais]
+      );
+      manuaisExcluidos = rowCount;
+    }
+
+    if (produtos.length > 0) {
+      const { rowCount } = await client.query(
+        'DELETE FROM produtos WHERE id = ANY($1::int[])',
+        [produtos]
+      );
+      produtosExcluidos = rowCount;
+    }
+
+    await client.query('COMMIT');
+    res.json({ manuais_excluidos: manuaisExcluidos, produtos_excluidos: produtosExcluidos });
+  } catch (e) {
+    await client.query('ROLLBACK');
+    res.status(500).json({ erro: 'Erro ao excluir itens' });
+  } finally {
+    client.release();
+  }
+});
+
 router.get('/pdf', async (req, res) => {
   try {
     const { rows: automaticos } = await db.query(`

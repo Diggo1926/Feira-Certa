@@ -156,4 +156,30 @@ router.delete('/:id', [param('id').isInt({ min: 1 }), validar], async (req, res)
   }
 });
 
+// POST /excluir-lote — exclui vários produtos em uma transação
+// historico_precos e registros_consumo têm ON DELETE CASCADE (excluídos automaticamente)
+// itens_feira.produto_id tem ON DELETE SET NULL (histórico de feiras preservado)
+router.post('/excluir-lote', [
+  body('ids').isArray({ min: 1, max: 200 }).withMessage('ids deve ser array com 1 a 200 itens'),
+  body('ids.*').isInt({ min: 1 }).withMessage('ids deve conter apenas inteiros positivos'),
+  validar
+], async (req, res) => {
+  const { ids } = req.body;
+  const client = await db.connect();
+  try {
+    await client.query('BEGIN');
+    const { rowCount } = await client.query(
+      'DELETE FROM produtos WHERE id = ANY($1::int[])',
+      [ids]
+    );
+    await client.query('COMMIT');
+    res.json({ excluidos: rowCount });
+  } catch (e) {
+    await client.query('ROLLBACK');
+    res.status(500).json({ erro: 'Erro ao excluir produtos' });
+  } finally {
+    client.release();
+  }
+});
+
 module.exports = router;
