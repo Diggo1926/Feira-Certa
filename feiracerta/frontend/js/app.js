@@ -32,6 +32,10 @@ function toast(msg, tipo = '') {
 }
 
 function irPara(pagId) {
+  // Sai do modo seleção ao navegar para outra tela
+  if (pagId !== 'pg-estoque' && typeof _sairModoSelecaoEstoque === 'function') _sairModoSelecaoEstoque();
+  if (pagId !== 'pg-lista' && typeof _sairModoSelecaoLista === 'function') _sairModoSelecaoLista();
+
   document.querySelectorAll('.pagina').forEach(p => p.classList.remove('ativa'));
   document.getElementById(pagId)?.classList.add('ativa');
   document.querySelectorAll('.nav-item').forEach(n => {
@@ -82,6 +86,7 @@ window.addEventListener('DOMContentLoaded', () => {
   carregarDashboard();
   solicitarNotificacoes();
   _inicializarNavToque();
+  _inicializarBarrasSelecao();
 });
 
 // ─── Navegação touch-safe ──────────────────────────────────────────────────
@@ -102,6 +107,26 @@ function _inicializarNavToque() {
       }
       // dy < 8 → tap real → click sintético dispara o onclick normalmente
     }, { passive: false });
+  });
+}
+
+// ─── Proteção scroll-vs-tap nas barras de seleção ────────────────────────────
+// Mesma lógica da barra de navegação: dy >= 8px = scroll, cancela click sintético.
+
+function _inicializarBarrasSelecao() {
+  ['barra-selecao-estoque', 'barra-selecao-lista'].forEach(id => {
+    const barra = document.getElementById(id);
+    if (!barra) return;
+    barra.querySelectorAll('.btn').forEach(btn => {
+      let touchStartY = 0;
+      btn.addEventListener('touchstart', e => {
+        touchStartY = e.touches[0].clientY;
+      }, { passive: true });
+      btn.addEventListener('touchend', e => {
+        const dy = Math.abs(e.changedTouches[0].clientY - touchStartY);
+        if (dy >= 8) e.preventDefault();
+      }, { passive: false });
+    });
   });
 }
 
