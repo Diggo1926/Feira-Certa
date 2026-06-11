@@ -1,5 +1,8 @@
 let _listaAtual = { automaticos: [], manuais: [] };
 let _marcadosAuto = new Set();
+let _modoSelecaoLista = false;
+let _selecionadosListaAuto = new Set();
+let _selecionadosListaManual = new Set();
 
 async function carregarLista() {
   const el = document.getElementById('conteudo-lista');
@@ -35,41 +38,71 @@ function renderizarLista() {
   if (automaticos.length > 0) {
     html += `<div class="categoria-titulo" style="color:var(--musgo)">Do Estoque</div>`;
     automaticos.forEach(item => {
-      const marcado = _marcadosAuto.has(item.id);
       const qtd = Math.ceil(item.quantidade_sugerida);
-      html += `
-        <div class="lista-item ${marcado ? 'marcado' : ''}" onclick="marcarItemAuto(${item.id})">
-          <div class="lista-checkbox ${marcado ? 'checked' : ''}">
-            <svg viewBox="0 0 24 24" fill="none" stroke-width="3"><polyline points="20 6 9 17 4 12"/></svg>
-          </div>
-          <div class="lista-item-info">
-            <div class="lista-item-nome">${item.nome}</div>
-            <div class="lista-item-meta">${qtd} ${item.unidade} <span class="badge badge-ok" style="font-size:10px">auto</span></div>
-          </div>
-          <div class="lista-item-preco">${formatarMoeda(qtd * item.preco)}</div>
-          <button class="btn-remover-item" onclick="event.stopPropagation(); deletarProdutoDaLista(${item.id})" title="Excluir produto">
-            <svg viewBox="0 0 24 24" fill="none" stroke-width="2" width="18" height="18"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6m3 0V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"/></svg>
-          </button>
-        </div>`;
+
+      if (_modoSelecaoLista) {
+        const sel = _selecionadosListaAuto.has(item.id);
+        html += `
+          <div class="lista-item${sel ? ' selecionado' : ''}" onclick="toggleSelecionadoListaAuto(${item.id})">
+            <div class="produto-checkbox${sel ? ' checked' : ''}">
+              <svg viewBox="0 0 24 24" fill="none" stroke-width="3"><polyline points="20 6 9 17 4 12"/></svg>
+            </div>
+            <div class="lista-item-info">
+              <div class="lista-item-nome">${item.nome}</div>
+              <div class="lista-item-meta">${qtd} ${item.unidade} <span class="badge badge-ok" style="font-size:10px">auto</span></div>
+            </div>
+            <div class="lista-item-preco">${formatarMoeda(qtd * item.preco)}</div>
+          </div>`;
+      } else {
+        const marcado = _marcadosAuto.has(item.id);
+        html += `
+          <div class="lista-item ${marcado ? 'marcado' : ''}" onclick="marcarItemAuto(${item.id})">
+            <div class="lista-checkbox ${marcado ? 'checked' : ''}">
+              <svg viewBox="0 0 24 24" fill="none" stroke-width="3"><polyline points="20 6 9 17 4 12"/></svg>
+            </div>
+            <div class="lista-item-info">
+              <div class="lista-item-nome">${item.nome}</div>
+              <div class="lista-item-meta">${qtd} ${item.unidade} <span class="badge badge-ok" style="font-size:10px">auto</span></div>
+            </div>
+            <div class="lista-item-preco">${formatarMoeda(qtd * item.preco)}</div>
+            <button class="btn-remover-item" onclick="event.stopPropagation(); deletarProdutoDaLista(${item.id})" title="Excluir produto">
+              <svg viewBox="0 0 24 24" fill="none" stroke-width="2" width="18" height="18"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6m3 0V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"/></svg>
+            </button>
+          </div>`;
+      }
     });
   }
 
   if (manuais.length > 0) {
     html += `<div class="categoria-titulo" style="color:var(--caramelo)">Adicionados Manualmente</div>`;
     manuais.forEach(item => {
-      html += `
-        <div class="lista-item ${item.marcado ? 'marcado' : ''}">
-          <div class="lista-checkbox ${item.marcado ? 'checked' : ''}" onclick="marcarItemManual(${item.id}, this)">
-            <svg viewBox="0 0 24 24" fill="none" stroke-width="3"><polyline points="20 6 9 17 4 12"/></svg>
-          </div>
-          <div class="lista-item-info" style="flex:1">
-            <div class="lista-item-nome">${item.nome}</div>
-            <div class="lista-item-meta">${item.quantidade} <span class="badge badge-manual" style="font-size:10px">manual</span></div>
-          </div>
-          <button class="btn-remover-item" onclick="removerItemManual(${item.id})" title="Remover">
-            <svg viewBox="0 0 24 24" fill="none" stroke-width="2" width="18" height="18"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6m3 0V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"/></svg>
-          </button>
-        </div>`;
+      if (_modoSelecaoLista) {
+        const sel = _selecionadosListaManual.has(item.id);
+        html += `
+          <div class="lista-item${sel ? ' selecionado' : ''}" onclick="toggleSelecionadoListaManual(${item.id})">
+            <div class="produto-checkbox${sel ? ' checked' : ''}">
+              <svg viewBox="0 0 24 24" fill="none" stroke-width="3"><polyline points="20 6 9 17 4 12"/></svg>
+            </div>
+            <div class="lista-item-info" style="flex:1">
+              <div class="lista-item-nome">${item.nome}</div>
+              <div class="lista-item-meta">${item.quantidade} <span class="badge badge-manual" style="font-size:10px">manual</span></div>
+            </div>
+          </div>`;
+      } else {
+        html += `
+          <div class="lista-item ${item.marcado ? 'marcado' : ''}">
+            <div class="lista-checkbox ${item.marcado ? 'checked' : ''}" onclick="marcarItemManual(${item.id}, this)">
+              <svg viewBox="0 0 24 24" fill="none" stroke-width="3"><polyline points="20 6 9 17 4 12"/></svg>
+            </div>
+            <div class="lista-item-info" style="flex:1">
+              <div class="lista-item-nome">${item.nome}</div>
+              <div class="lista-item-meta">${item.quantidade} <span class="badge badge-manual" style="font-size:10px">manual</span></div>
+            </div>
+            <button class="btn-remover-item" onclick="removerItemManual(${item.id})" title="Remover">
+              <svg viewBox="0 0 24 24" fill="none" stroke-width="2" width="18" height="18"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6m3 0V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"/></svg>
+            </button>
+          </div>`;
+      }
     });
   }
 
@@ -82,6 +115,120 @@ function renderizarLista() {
 
   document.getElementById('conteudo-lista').innerHTML = html;
 }
+
+// ─── Modo seleção ──────────────────────────────────────────────────────────
+
+function toggleSelecionadoListaAuto(id) {
+  if (_selecionadosListaAuto.has(id)) _selecionadosListaAuto.delete(id);
+  else _selecionadosListaAuto.add(id);
+  atualizarBarraSelecaoLista();
+  renderizarLista();
+}
+
+function toggleSelecionadoListaManual(id) {
+  if (_selecionadosListaManual.has(id)) _selecionadosListaManual.delete(id);
+  else _selecionadosListaManual.add(id);
+  atualizarBarraSelecaoLista();
+  renderizarLista();
+}
+
+function atualizarBarraSelecaoLista() {
+  const n = _selecionadosListaAuto.size + _selecionadosListaManual.size;
+  const btnExcluir = document.getElementById('btn-excluir-lista');
+  if (btnExcluir) {
+    btnExcluir.textContent = `Excluir (${n})`;
+    btnExcluir.disabled = n === 0;
+  }
+  const btnTodos = document.getElementById('btn-sel-todos-lista');
+  if (btnTodos) {
+    const total = _listaAtual.automaticos.length + _listaAtual.manuais.length;
+    const todos = total > 0 && n === total &&
+      _listaAtual.automaticos.every(i => _selecionadosListaAuto.has(i.id)) &&
+      _listaAtual.manuais.every(i => _selecionadosListaManual.has(i.id));
+    btnTodos.textContent = todos ? 'Desmarcar todos' : 'Selecionar todos';
+  }
+}
+
+function _sairModoSelecaoLista() {
+  _modoSelecaoLista = false;
+  _selecionadosListaAuto.clear();
+  _selecionadosListaManual.clear();
+  document.body.classList.remove('barra-selecao-ativa');
+  const barra = document.getElementById('barra-selecao-lista');
+  if (barra) barra.style.display = 'none';
+  const btn = document.getElementById('btn-selecionar-lista');
+  if (btn) btn.innerHTML = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16"><rect x="3" y="3" width="18" height="18" rx="2"/><polyline points="9 11 12 14 17 8"/></svg> Selecionar`;
+}
+
+function toggleModoSelecaoLista() {
+  if (_modoSelecaoLista) {
+    _sairModoSelecaoLista();
+    renderizarLista();
+    return;
+  }
+  _modoSelecaoLista = true;
+  document.body.classList.add('barra-selecao-ativa');
+  const barra = document.getElementById('barra-selecao-lista');
+  if (barra) barra.style.display = 'flex';
+  const btn = document.getElementById('btn-selecionar-lista');
+  if (btn) btn.innerHTML = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg> Cancelar`;
+  atualizarBarraSelecaoLista();
+  renderizarLista();
+}
+
+function selecionarTodosLista() {
+  const total = _listaAtual.automaticos.length + _listaAtual.manuais.length;
+  const n = _selecionadosListaAuto.size + _selecionadosListaManual.size;
+  const todos = total > 0 && n === total &&
+    _listaAtual.automaticos.every(i => _selecionadosListaAuto.has(i.id)) &&
+    _listaAtual.manuais.every(i => _selecionadosListaManual.has(i.id));
+
+  if (todos) {
+    _selecionadosListaAuto.clear();
+    _selecionadosListaManual.clear();
+  } else {
+    _listaAtual.automaticos.forEach(i => _selecionadosListaAuto.add(i.id));
+    _listaAtual.manuais.forEach(i => _selecionadosListaManual.add(i.id));
+  }
+  atualizarBarraSelecaoLista();
+  renderizarLista();
+}
+
+async function excluirSelecionadosLista() {
+  const autoIds = [..._selecionadosListaAuto];
+  const manualIds = [..._selecionadosListaManual];
+  if (!autoIds.length && !manualIds.length) return;
+
+  const msg = autoIds.length > 0
+    ? `Atenção: ${autoIds.length} item(ns) desta seleção são produtos do estoque. Excluí-los aqui REMOVE o produto do estoque permanentemente, junto com seu histórico. Continuar?`
+    : `Excluir ${manualIds.length} item(ns) da lista?`;
+  if (!confirm(msg)) return;
+
+  try {
+    const res = await api('/api/lista/excluir-lote', {
+      method: 'POST',
+      body: { manuais: manualIds, produtos: autoIds }
+    });
+
+    if (autoIds.length) {
+      _listaAtual.automaticos = _listaAtual.automaticos.filter(i => !autoIds.includes(i.id));
+      autoIds.forEach(id => _marcadosAuto.delete(id));
+    }
+    if (manualIds.length) {
+      _listaAtual.manuais = _listaAtual.manuais.filter(i => !manualIds.includes(i.id));
+    }
+
+    _sairModoSelecaoLista();
+    renderizarLista();
+
+    const totalExcluidos = (res.manuais_excluidos || 0) + (res.produtos_excluidos || 0);
+    toast(`${totalExcluidos} item(ns) excluído(s)`, 'sucesso');
+  } catch (e) {
+    toast('Erro ao excluir itens. Tente novamente.', 'erro');
+  }
+}
+
+// ─── Funções existentes ────────────────────────────────────────────────────
 
 function marcarItemAuto(id) {
   if (_marcadosAuto.has(id)) _marcadosAuto.delete(id);
@@ -158,7 +305,6 @@ document.getElementById('item-manual-qtd')?.addEventListener('keydown', e => {
   if (e.key === 'Enter') confirmarItemManual();
 });
 
-// Fechar modal ao clicar fora
 document.getElementById('modal-item-manual')?.addEventListener('click', e => {
   if (e.target === document.getElementById('modal-item-manual')) fecharModalItemManual();
 });
@@ -219,7 +365,8 @@ async function exportarPDF() {
   }
 }
 
-// Modo Feira
+// ─── Modo Feira ────────────────────────────────────────────────────────────
+
 let _itensModoFeira = [];
 
 function abrirModoFeira() {
@@ -247,7 +394,6 @@ function renderizarModoFeira() {
 function toggleModoFeira(idx) {
   _itensModoFeira[idx].marcado = !_itensModoFeira[idx].marcado;
 
-  // Sincronizar marcados de volta
   _itensModoFeira.forEach(item => {
     if (item.id.startsWith('a_')) {
       const id = parseInt(item.id.replace('a_', ''));
