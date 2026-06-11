@@ -47,6 +47,9 @@ function renderizarLista() {
             <div class="lista-item-meta">${qtd} ${item.unidade} <span class="badge badge-ok" style="font-size:10px">auto</span></div>
           </div>
           <div class="lista-item-preco">${formatarMoeda(qtd * item.preco)}</div>
+          <button class="btn-remover-item" onclick="event.stopPropagation(); deletarProdutoDaLista(${item.id})" title="Excluir produto">
+            <svg viewBox="0 0 24 24" fill="none" stroke-width="2" width="18" height="18"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6m3 0V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"/></svg>
+          </button>
         </div>`;
     });
   }
@@ -94,6 +97,21 @@ async function marcarItemManual(id, checkEl) {
     renderizarLista();
   } catch (e) {
     toast('Erro ao marcar item', 'erro');
+  }
+}
+
+async function deletarProdutoDaLista(id) {
+  const item = _listaAtual.automaticos.find(i => i.id === id);
+  if (!item) return;
+  if (!confirm(`Excluir "${item.nome}" permanentemente? Esta ação não pode ser desfeita.`)) return;
+  try {
+    await api(`/api/produtos/${id}`, { method: 'DELETE' });
+    _listaAtual.automaticos = _listaAtual.automaticos.filter(i => i.id !== id);
+    _marcadosAuto.delete(id);
+    renderizarLista();
+    toast('Produto excluído', 'sucesso');
+  } catch (e) {
+    toast('Erro ao excluir produto', 'erro');
   }
 }
 

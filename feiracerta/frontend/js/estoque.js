@@ -47,6 +47,9 @@ function renderizarEstoque(produtos) {
             <span class="qty-val">${p.quantidade_atual % 1 === 0 ? p.quantidade_atual : p.quantidade_atual.toFixed(1)}</span>
             <button class="qty-btn" onclick="alterarQtd(${p.id}, 1)">+</button>
           </div>
+          <button class="btn-remover-item" onclick="event.stopPropagation(); deletarProduto(${p.id})" title="Excluir produto">
+            <svg viewBox="0 0 24 24" fill="none" stroke-width="2" width="18" height="18"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6m3 0V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"/></svg>
+          </button>
         </div>`;
     });
   });
@@ -90,3 +93,17 @@ document.getElementById('lista-estoque')?.addEventListener('touchstart', e => {
   }, 600);
 });
 document.getElementById('lista-estoque')?.addEventListener('touchend', () => clearTimeout(_longPressTimer));
+
+async function deletarProduto(id) {
+  const p = _produtos.find(x => x.id === id);
+  if (!p) return;
+  if (!confirm(`Excluir "${p.nome}" permanentemente? Esta ação não pode ser desfeita.`)) return;
+  try {
+    await api(`/api/produtos/${id}`, { method: 'DELETE' });
+    _produtos = _produtos.filter(x => x.id !== id);
+    renderizarEstoque(_produtos);
+    toast('Produto excluído', 'sucesso');
+  } catch (e) {
+    toast('Erro ao excluir produto', 'erro');
+  }
+}
