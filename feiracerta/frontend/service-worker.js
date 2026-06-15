@@ -1,4 +1,4 @@
-const CACHE_NAME = 'feiracerta-v2';
+const CACHE_NAME = 'feiracerta-v3';
 const STATIC_ASSETS = ['/', '/css/style.css', '/js/app.js', '/js/estoque.js', '/js/cadastro.js', '/js/lista.js', '/js/feira.js', '/js/historico.js', '/js/consumo.js', '/js/configuracoes.js'];
 
 self.addEventListener('install', e => {
@@ -20,7 +20,15 @@ self.addEventListener('activate', e => {
 self.addEventListener('fetch', e => {
   if (e.request.url.includes('/api/')) return;
   e.respondWith(
-    caches.match(e.request).then(cached => cached || fetch(e.request).catch(() => cached))
+    fetch(e.request)
+      .then(response => {
+        if (response.ok) {
+          const clone = response.clone();
+          caches.open(CACHE_NAME).then(c => c.put(e.request, clone));
+        }
+        return response;
+      })
+      .catch(() => caches.match(e.request))
   );
 });
 
