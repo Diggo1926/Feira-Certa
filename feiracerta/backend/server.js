@@ -72,6 +72,11 @@ app.use('/api/nota', require('./routes/nota'));
 app.use('/api/consumo', require('./routes/consumo'));
 app.use('/api/config', require('./routes/configuracoes'));
 
+// Healthcheck (sem autenticação, usado pelo Railway)
+app.get('/health', (req, res) => {
+  res.status(200).json({ status: 'ok' });
+});
+
 // Error handler - never expose stack traces
 app.use((err, req, res, next) => {
   console.error(err.message);
@@ -82,7 +87,7 @@ const { initDB } = require('./db/database');
 
 initDB()
   .then(() => {
-    app.listen(PORT, () => {
+    app.listen(PORT, '0.0.0.0', () => {
       console.log(`FeiraCerta rodando na porta ${PORT}`);
     });
   })
