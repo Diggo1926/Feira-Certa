@@ -1,12 +1,25 @@
 const { Pool } = require('pg');
 
+const connectionString = process.env.DATABASE_URL;
+
+if (!connectionString) {
+  console.error('Erro fatal: a variável de ambiente DATABASE_URL não está definida.');
+  process.exit(1);
+}
+
 const pool = new Pool({
-  connectionString: process.env.DATABASE_URL,
+  connectionString,
   ssl: process.env.NODE_ENV === 'production' ? { rejectUnauthorized: false } : false
 });
 
-async function initDB() {
-  await pool.query(`
+const MAX_RETRIES = 5;
+const BASE_DELAY_MS = 1000;
+
+function sleep(ms) {
+  return new Promise(resolve => setTimeout(resolve, ms));
+}
+
+const CREATE_TABLES_SQL = `
     CREATE TABLE IF NOT EXISTS produtos (
       id SERIAL PRIMARY KEY,
       nome TEXT NOT NULL,
@@ -97,7 +110,27 @@ async function initDB() {
       ('Frios e Embutidos'),
       ('Congelados')
     ON CONFLICT (nome) DO NOTHING;
-  `);
+  `;
+
+async function initDB() {
+  for (let attempt = 1; attempt <= MAX_RETRIES; attempt++) {
+    try {
+      await pool.query(CREATE_TABLES_SQL);
+      console.log(`Conexão com o banco de dados estabelecida (tentativa ${attempt}/${MAX_RETRIES}).`);
+      return;
+    } catch (err) {
+      console.error(`Tentativa ${attempt}/${MAX_RETRIES} de conexão com o banco de dados falhou: ${err.message}`);
+
+      if (attempt === MAX_RETRIES) {
+        console.error('Número máximo de tentativas de conexão com o banco de dados atingido. Encerrando o processo.');
+        throw err;
+      }
+
+      const delayMs = BASE_DELAY_MS * 2 ** (attempt - 1);
+      console.log(`Aguardando ${delayMs / 1000}s antes da próxima tentativa...`);
+      await sleep(delayMs);
+    }
+  }
 }
 
 module.exports = pool;
