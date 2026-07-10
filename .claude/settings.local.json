@@ -22,7 +22,26 @@
       "Bash(git *)",
       "Bash(Get-ChildItem -Path \"C:\\\\Users\\\\Diggo.Dev\\\\Documents\\\\projetos pessoais\\\\Controle de estoque\\\\feiracerta\" -Recurse -File)",
       "Bash(Select-Object -ExpandProperty FullName)",
-      "Bash(Sort-Object)"
+      "Bash(Sort-Object)",
+      "PowerShell(Get-ChildItem -Path \"C:\\\\Users\\\\Diggo.Dev\\\\Documents\\\\projetos pessoais\\\\Controle de estoque\\\\feiracerta\\\\backend\" -Recurse | ForEach-Object { $_.FullName -replace [regex]::Escape\\(\"C:\\\\Users\\\\Diggo.Dev\\\\Documents\\\\projetos pessoais\\\\Controle de estoque\\\\feiracerta\\\\backend\"\\), \".\" })",
+      "Bash(node gerar-icones.js)",
+      "Bash(Remove-Item -Recurse -Force node_modules, package.json, package-lock.json -ErrorAction SilentlyContinue)",
+      "Bash(Get-ChildItem -Path \"C:\\\\Users\\\\Diggo.Dev\\\\Documents\\\\projetos pessoais\\\\Controle de estoque\\\\feiracerta\" -Recurse -Force)",
+      "Bash(Select-Object FullName)",
+      "Bash(Sort-Object FullName)",
+      "Bash(vercel env *)",
+      "Bash(npm uninstall *)",
+      "Bash(Remove-Item \"C:\\\\Users\\\\Diggo.Dev\\\\Documents\\\\projetos pessoais\\\\Controle de estoque\\\\feiracerta\\\\backend\\\\middleware\\\\autenticacao.js\" -Force)",
+      "Bash(Remove-Item \"C:\\\\Users\\\\Diggo.Dev\\\\Documents\\\\projetos pessoais\\\\Controle de estoque\\\\feiracerta\\\\backend\\\\routes\\\\auth.js\" -Force)",
+      "Bash(Write-Output \"Deletados\")",
+      "Bash(rm \"C:\\\\Users\\\\Diggo.Dev\\\\Documents\\\\projetos pessoais\\\\Controle de estoque\\\\feiracerta\\\\backend\\\\middleware\\\\autenticacao.js\")",
+      "Bash(rm \"C:\\\\Users\\\\Diggo.Dev\\\\Documents\\\\projetos pessoais\\\\Controle de estoque\\\\feiracerta\\\\backend\\\\routes\\\\auth.js\")",
+      "Bash(Get-ChildItem -Path \"C:\\\\Users\\\\Diggo.Dev\\\\Documents\\\\projetos pessoais\\\\Controle de estoque\" -Force)",
+      "Bash(Select-Object Name, PSIsContainer)",
+      "Bash(Get-ChildItem -Path \"C:\\\\Users\\\\Diggo.Dev\\\\Documents\\\\projetos pessoais\\\\Controle de estoque\\\\src\" -Force -Recurse -ErrorAction SilentlyContinue)",
+      "Bash(ConvertTo-Csv -NoTypeInformation)",
+      "Bash(node -c db/database.js)",
+      "Bash(node -c server.js)"
     ]
   }
 }
